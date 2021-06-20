@@ -1,7 +1,8 @@
 var database = firebase.database();
 let room = "speech_room";
-const send = document.getElementById("send");
+const user = document.getElementById("user");
 const name = document.getElementById("name");
+const send = document.getElementById("send");
 const output1 = document.getElementById("output1");
 const output2 = document.getElementById("output2");
 
@@ -33,9 +34,9 @@ recognition.onresult = (event) => {
     }
     resultDiv.innerHTML = finalTranscript + '<i style="color:#ddd;">' + interimTranscript + '</i>';
     resultDiv2.innerHTML = finalTranscript.length; // 文字数
-
-    setSpeechVolume(finalTranscript);
     
+    setSpeechVolume(finalTranscript);
+    readOnceWithGet();
 }
 
 
@@ -48,44 +49,53 @@ stopBtn.onclick = () => {
 
 //送信処理
 send.addEventListener('click', function() {
-    database.ref(room+'/'+name.value).set({
-	id: name.value,
-	speechVolume: finalTranscript.length,
+    database.ref(room+'/'+user.value).set({
+	name: name.value,
+	speechVolume: 0,
     });
+    readOnceWithGet();
 });
+//データを更新
 function setSpeechVolume(finalTranscript){
-    database.ref(room+'/'+name.value).set({
-	id: name.value,
+    database.ref(room+'/'+user.value).set({
+	name: name.value,
 	speechVolume: finalTranscript.length,
     });
 }
 
+//get()を使用してデータを 1 回読み取る
+function readOnceWithGet() {
+    const dbRef = firebase.database().ref(room);
+    
+    dbRef.child("user1").get().then((snapshot) => {
+	if (snapshot.exists()) {
+	    const v = snapshot.val();
+	    const k = snapshot.key;
+	    let str = "";
+	    str += '<div class="name">名前：'+v.name+'</div>';
+	    str += '<div class="text">発言量：'+v.speechVolume+'</div>';
+	    if (k==="user1") output1.innerHTML = str;
+	    else output.innerHTML = str;
+	} else {
+	    console.log("No data available");
+	}
+    }).catch((error) => {
+	console.error(error);
+    });
 
-//受信処理
-/*
-database.ref(room+'/'+name.value).on("child_changed", function(data) {
-    const v = data.val();
-    const k = data.key;
-    let str = "";
-    str += '<div class="name">名前：'+v.id+'</div>';
-    str += '<div class="text">発言量：'+v.speechVolume+'</div>';
-    output1.innerHTML = str;
-});
-*/
-database.ref(room+"/user1").on("value", function(data) {
-    const v = data.val();
-    const k = data.key;
-    let str = "";
-    str += '<div class="name">名前：'+k+'</div>';
-    str += '<div class="text">発言量：'+v.speechVolume+'</div>';
-    output1.innerHTML = str;
-});
-database.ref(room+"/user2").on("value", function(data) {
-    const v = data.val();
-    const k = data.key;
-    let str = "";
-    str += '<div class="name">名前：'+k+'</div>';
-    str += '<div class="text">発言量：'+v.speechVolume+'</div>';
-    output2.innerHTML = str;
-});
-
+    dbRef.child("user2").get().then((snapshot) => {
+	if (snapshot.exists()) {
+	    const v = snapshot.val();
+	    const k = snapshot.key;
+	    let str = "";
+	    str += '<div class="name">名前：'+v.name+'</div>';
+	    str += '<div class="text">発言量：'+v.speechVolume+'</div>';
+	    if (k==="user1") output1.innerHTML = str;
+	    else output2.innerHTML = str;
+	} else {
+	    console.log("No data available");
+	}
+    }).catch((error) => {
+	console.error(error);
+    });
+}
