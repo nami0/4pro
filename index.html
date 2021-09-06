@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Speech App</title>
 
+    <!-- ライブラリを読み込む(firebase.js) -->
     <!-- The core Firebase JS SDK is always required and must be listed first -->
     <script src="https://www.gstatic.com/firebasejs/8.6.7/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.7/firebase-auth.js"></script>
@@ -32,6 +33,11 @@
       firebase.analytics();
     </script>
 
+    <!-- ライブラリを読み込む(chart.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-streaming@2.0.0"></script>
+
     <link rel="stylesheet" href="./style.css">
   </head>
   <body>
@@ -42,6 +48,7 @@
 	<select id="user">
 	  <option value="user1">1</option>
 	  <option value="user2">2</option>
+	  <option value="user3">3</option>
 	</select>
       </p>
       <div>
@@ -49,16 +56,17 @@
 	<input type="text" id="name">
       </div>
       <button id="send">send</button>
-      <br>
+      <button id="reset">reset</button><br>
       <button id="start-btn">start</button>
       <button id="stop-btn">stop</button>
       <div id="result-div"></div>
       <div id="result-div2"></div>
-      <hr>
       <div id="output1"></div>
-      <hr>
       <div id="output2"></div>
+      <div id="output3"></div>
     </div>
+
+    <canvas id="myChart"></canvas>
     
     <script src="./index.js"></script>
 
