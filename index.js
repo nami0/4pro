@@ -23,6 +23,13 @@ recognition.interimResults = true;
 recognition.continuous = true;
 
 let finalTranscript = ''; // 確定した(黒の)認識結果
+let str = [];
+let dataAll = [
+    {name: ""},{volume: 0},{script: ""},
+    {name: ""},{volume: 0},{script: ""},
+    {name: ""},{volume: 0},{script: ""}
+];
+let sumSpeechVolume = 0;
 
 recognition.onresult = (event) => {
     let interimTranscript = ''; // 暫定(灰色)の認識結果
@@ -38,7 +45,7 @@ recognition.onresult = (event) => {
     resultDiv2.innerHTML = finalTranscript.length; // 文字数
     
     setSpeechVolume(finalTranscript);
-    readOnceWithGet();
+    getLatestData();
 }
 
 
@@ -57,15 +64,15 @@ send.addEventListener('click', function() {
 	speechVolume: finalTranscript.length,
 	script: finalTranscript,
     });
-    readOnceWithGet();
+    getLatestData();
 });
 reset.addEventListener('click', function() {
     database.ref(room+'/'+user.value).set({
-	name: null,
+	name: "",
 	speechVolume: 0,
-	script: null,
+	script: "",
     });
-    readOnceWithGet();
+    getLatestData();
 });
 //データを更新
 function setSpeechVolume(finalTranscript){
@@ -76,31 +83,7 @@ function setSpeechVolume(finalTranscript){
     });
 }
 
-//get()を使用してデータを 1 回読み取る
-function readOnceWithGet() {
-    const dbRef = firebase.database().ref(room);
-    for(let i=1; i<4; i++){
-	dbRef.child("user"+i).get().then((snapshot) => {
-	    if (snapshot.exists()) {
-		const v = snapshot.val();
-		const k = snapshot.key;
-		let str = '<hr>';
-		str += '<div class="name">名前：'+v.name+'</div>';
-		str += '<div class="text">発言量：'+v.speechVolume+'</div>';
-		str += '<div class="script">発言内容：'+v.script+'</div>';
-		str += '<hr>';
-		if (k==="user1") output1.innerHTML = str;
-		else if (k==="user2") output2.innerHTML = str;
-		else output3.innerHTML = str;
-	    } else {
-		console.log("No data available");
-	    }
-	}).catch((error) => {
-	    console.error(error);
-	});
-    }
-}
-
+//chart表示
 let data = [];
 var ctx = document.getElementById('myChart').getContext('2d');
 var chart = new Chart(ctx, {
@@ -147,7 +130,7 @@ var chart = new Chart(ctx, {
 	}
     }
 });
-
+//データベースからデータを読み取る
 function getLatestData() {
     const dbRef = firebase.database().ref(room);
     for(let i=1; i<4; i++){
@@ -159,6 +142,11 @@ function getLatestData() {
 		    x: Date.now(),
 		    y: v.speechVolume
 		}
+		dataAll[i-1] = {
+		    name: v.name,
+		    volume: v.speechVolume,
+		    script: v.script
+		}
 	    } else {
 		console.log("No data available");
 	    }
@@ -166,4 +154,22 @@ function getLatestData() {
 	    console.error(error);
 	});
     }
+    writeHTML();
 }
+//HTML表示
+function writeHTML() {
+    for(let i=0; i<3; i++) sumSpeechVolume += dataAll[i].volume;
+    for(let i=0; i<3; i++){
+	str[i] = '<hr>';
+	str[i] += '<div class="name">名前：'+dataAll[i].name+'</div>';
+	str[i] += '<div class="text">発言量：'+dataAll[i].volume+'</div>';
+	str[i] += '<div class="script">発言内容：'+dataAll[i].script+'</div>';
+	str[i] += "発言の割合: " + ( dataAll[i].volume / sumSpeechVolume ) * 100 + "%";
+	str[i] += '<hr>';
+    }
+    output1.innerHTML = str[0];
+    output2.innerHTML = str[1];
+    output3.innerHTML = str[2];
+    sumSpeechVolume = 0;
+}
+
