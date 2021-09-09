@@ -44,29 +44,30 @@
     <h1>発言を取得する</h1>
     <div>
       <p>
-	User
-	<select id="user">
-	  <option value="user1">1</option>
-	  <option value="user2">2</option>
-	  <option value="user3">3</option>
-	</select>
-      </p>
-      <div>
-	Name<br>
+	人数
+	<input type="number" id="number" min="1" value="1">
+	No.
+	<input type="number" id="user" min="1">
+	　名前
 	<input type="text" id="name">
-      </div>
-      <button id="send">send</button>
-      <button id="reset">reset</button><br>
-      <button id="start-btn">start</button>
-      <button id="stop-btn">stop</button>
+	<button id="send">send</button>
+      </p>
+      <p>
+	音声認識　
+	<button id="start-btn">start</button>
+	<button id="stop-btn">stop</button>
+	　　
+	<button id="reset">reset</button>
+      </p>
       <div id="result-div"></div>
-      <div id="result-div2"></div>
-      <div id="output1"></div>
-      <div id="output2"></div>
-      <div id="output3"></div>
+      <div id="result-div2">0</div>
+      
+      <canvas id="myChart"></canvas>
+
+      <div id="output"></div>
     </div>
 
-    <canvas id="myChart"></canvas>
+    
     
     <script src="./index.js"></script>
 

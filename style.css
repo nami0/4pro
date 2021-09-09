@@ -16,5 +16,14 @@ textarea {
 }
 
 #output {
-    background-color: skyblue;
+    background-color: rgba(0,200,255,0.5);
+}
+#number {
+    width: 3em;
+}
+#user{
+    width: 3em;
+}
+#name{
+    width: 6em;
 }
