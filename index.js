@@ -6,6 +6,7 @@ const name = document.getElementById("name");
 const send = document.getElementById("send");
 const reset = document.getElementById("reset");
 const output = document.getElementById("output");
+const outputStr = document.getElementById("outputStr");
 
 //音声認識
 const startBtn = document.querySelector('#start-btn');
@@ -25,9 +26,12 @@ let finalTranscript = ''; // 確定した(黒の)認識結果
 
 //HTML表示
 let n = number.value;
+let s = '';
+let t = '';
 let str = [];
-let sumSpeechVolume = 0;
+
 let dataAll = [];
+let sumSpeechVolume = 0;
 
 recognition.onresult = (event) => {
     let interimTranscript = ''; // 暫定(灰色)の認識結果
@@ -44,14 +48,12 @@ recognition.onresult = (event) => {
     writeSpeechVolume(finalTranscript,interimTranscript);
 }
 
-
 startBtn.onclick = () => {
     recognition.start();
 }
 stopBtn.onclick = () => {
     recognition.stop();
 }
-
 
 //送信処理
 send.addEventListener('click', function() {
@@ -62,17 +64,14 @@ send.addEventListener('click', function() {
     });
     getLatestData();
 });
+//データベースからデータを削除
 reset.addEventListener('click', function() {
-    database.ref(room+'/'+"user"+user.value).set({
-	name: "",
-	speechVolume: 0,
-	script: "",
-    });
+    database.ref(room+'/'+"user"+user.value).set(null);
     finalTranscript = '';
     writeSpeechVolume(finalTranscript,'');
     getLatestData();
 });
-//データを更新
+//データベースに新しいデータをセット
 function setSpeechVolume(finalTranscript){
     database.ref(room+'/'+"user"+user.value).set({
 	name: name.value,
@@ -86,16 +85,31 @@ function writeSpeechVolume(finalTranscript,interimTranscript){
     resultDiv2.innerHTML = finalTranscript.length; // 文字数
 }
 
+//人数が変更された時
+number.onchange = () => {
+    n = number.value;
+    getLatestData();
+    writeHTML();
+}
+
 //chart表示
 let data = [];
+let data2 = [];
 let rgb=[];
 var ctx = document.getElementById('myChart').getContext('2d');
+var ctx2 = document.getElementById('myChart2').getContext('2d');
 var chart = new Chart(ctx, {
     type: 'line',
     data: {
 	datasets: []
     },
     options: {
+	plugins: {
+	    title: {
+		display: true,
+		text: '発言量',
+	    },
+	},
 	scales: {
 	    xAxes: {
 		type: 'realtime',
@@ -111,6 +125,7 @@ var chart = new Chart(ctx, {
 		    
 		    onRefresh: chart => {
 			getLatestData();
+			writeStr();
 			for(let i=0; i<n; i++) {
 			    if(chart.data.datasets[i] == undefined){
 				if(dataAll[i] != undefined){
@@ -122,6 +137,9 @@ var chart = new Chart(ctx, {
 				updateYAxes();
 			    }
 			}
+			for(let i=chart.data.datasets.length-1; i>=n; i--) {
+			    chart.data.datasets.splice(i,1);
+			}
 		    }
 		}
 	    },
@@ -131,9 +149,60 @@ var chart = new Chart(ctx, {
 	}
     }
 });
+var chart2 = new Chart(ctx2, {
+    type: 'line',
+    data: {
+	datasets: []
+    },
+    options: {
+	plugins: {
+	    title: {
+		display: true,
+		text: '占有率',
+	    },
+	},
+	scales: {
+	    xAxes: {
+		type: 'realtime',
+		display: false,
+		
+		realtime: {
+		    duration: 20000,  // 過去20000ミリ秒のデータを表示
+		    refresh: 1000,    // onRefresh コールバックを1000ミリ秒毎に呼び出し
+		    delay: 1000,      // 1000ミリ秒の遅延により、次の値が確定し線が完全に引けてから表示
+		    pause: false,     // チャートは一時停止していない
+		    ttl: undefined,   // データはチャートから消えると自動的に削除
+		    frameRate: 30,    // データポイントを毎秒30回描画
+		    
+		    onRefresh: chart => {
+			getLatestData();
+			writeStr();
+			for(let i=0; i<n; i++) {
+			    if(chart2.data.datasets[i] == undefined){
+				if(dataAll[i] != undefined){
+				    writeDatasets(i);
+				}
+			    } else {
+				chart2.data.datasets[i].data.push(data2[i]);
+				chart2.data.datasets[i].label = setLabel(i);
+			    }
+			}
+			for(let i=chart2.data.datasets.length-1; i>=n; i--) {
+			    chart2.data.datasets.splice(i,1);
+			}
+		    }
+		}
+	    },
+	    yAxes: {
+		min: 0,
+		max: 100
+	    }
+	}
+    }
+});
+writeHTML();
 //データベースからデータを読み取る
 function getLatestData() {
-    n = number.value;
     const dbRef = firebase.database().ref(room);
     for(let i=0; i<n; i++){
 	dbRef.child("user"+(i+1)).get().then((snapshot) => {
@@ -152,23 +221,45 @@ function getLatestData() {
 		    script: ""
 		}
 	    }
-	    //console.log("No data available");
 	}).catch((error) => {
 	    console.error(error);
 	});
+    }
+    setDatas();
+}
+function setDatas() {
+    sumSpeechVolume = 0;
+    for(let i=0; i<n; i++){
+	sumSpeechVolume += (dataAll[i]===undefined) ? 0 : dataAll[i].volume;
+    }
+    for(let i=0; i<n; i++){
 	if(dataAll[i] === undefined){
 	    data[i] = {
 		x: Date.now(),
 		y: 0
 	    };
+	    data2[i] = {
+		x: Date.now(),
+		y: 0
+	    }
 	}else{
 	    data[i] = {
 		x: Date.now(),
 		y: dataAll[i].volume
 	    };
+	    if(sumSpeechVolume != 0){
+		data2[i] = {
+		    x: Date.now(),
+		    y: Math.floor((dataAll[i].volume / sumSpeechVolume) * 100)
+		}
+	    } else {
+		data2[i] = {
+		    x: Date.now(),
+		    y: 0
+		}
+	    }
 	}
     }
-    writeHTML();
 }
 function writeDatasets(i) {
     if(rgb[i] == null){
@@ -184,77 +275,79 @@ function writeDatasets(i) {
 	backgroundColor:"rgba("+rgb[i].r+","+rgb[i].g+","+rgb[i].b+",0.4)",
 	data: [],
     });
+    chart2.data.datasets[i] = ({
+	label: setLabel(i),
+	borderColor: "rgba("+rgb[i].r+","+rgb[i].g+","+rgb[i].b+",1)",
+	backgroundColor:"rgba("+rgb[i].r+","+rgb[i].g+","+rgb[i].b+",0.4)",
+	data: [],
+    });
     chart.update();
-}
-function setLabel(i){
-    let label;
-    if(dataAll[i].name != ""){
-	label = dataAll[i].name;
-    } else {
-	label = "No."+(i+1);
-    }
-    return label;
+    chart2.update();
 }
 function randomColor() {
     let rgb = Math.floor(Math.random() * (255 + 1));
     return rgb;
 }
+function setLabel(i){
+    return (dataAll[i] != undefined && dataAll[i].name != "") ? dataAll[i].name
+	: "No."+(i+1);
+}
 function updateYAxes(){
     let max = 0;
     let min = data[0].y;
     for(let i=0; i<n; i++){
-	if(data[i].y > max){
-	    max = data[i].y;
-	}
-	if(data[i].y < min){
-	    min = data[i].y;
-	}
+	max = (data[i].y > max) ? data[i].y : max;
+	min = (data[i].y < min) ? data[i].y : min;
     }
-    if(min >= 10){
-	chart.options.scales.yAxes.min = min - 10;
-    } else {
-	chart.options.scales.yAxes.min = 0;
-    }
+    chart.options.scales.yAxes.min = (min >= 10) ? min - 10 : 0;
     chart.options.scales.yAxes.max = max + 10;
 }
 
 //HTML表示
 function writeHTML() {
-    for(let i=0; i<n; i++){
-	if(dataAll[i] === undefined){
-	} else {
-	    sumSpeechVolume += dataAll[i].volume;
-	}
-	
+    s = '';
+    t = '';
+    writeTabHTML();
+    output.innerHTML = s;
+    outputStr.innerHTML = t;
+}
+function writeTabHTML(){
+    s += '<li class="nav-item">';
+    s += '<a href="#output0" class="nav-link active" data-bs-toggle="tab" id="label0">'+setLabel(0)+'</a>';
+    s += '</li>';
+    for(let i=1; i<n; i++){
+	s += '<li class="nav-item">';
+	s += '<a href="#output'+i+'" class="nav-link" data-bs-toggle="tab" id="label'+i+'">'+setLabel(i)+'</a>';
+	s += '</li>';
     }
+    t += '<div id="output0" class="tab-pane fade show active">';
+    t += '<div id="outputStr0"></div>'
+    t += '</div>';
+    for(let i=1; i<n; i++){
+	t += '<div id="output'+i+'" class="tab-pane fade">';
+	t += '<div id="outputStr'+i+'"></div>'
+	t += '</div>';
+    }
+}
+function writeStr() {
     for(let i=0; i<n; i++){
 	if(dataAll[i] === undefined){
 	    str[i] = "loading..."
 	} else {
-	    writeStr(i);
+	    if(dataAll[i].name=="" && dataAll[i].volume==0 && dataAll[i].script==""){
+		str[i] = "No data available"
+	    } else {
+		str[i] = 'No.'+(i+1)+'　名前：'+dataAll[i].name+'<br>';
+		str[i] += '発言量：'+dataAll[i].volume+' ';
+		str[i] += '('+ data2[i].y +'%)<br>';
+		str[i] += '発言内容：'+dataAll[i].script;
+	    }
 	}
     }
-    
-    output.innerHTML = outputStr(str);
-    sumSpeechVolume = 0;
-}
-function writeStr(i) {
-    if(dataAll[i].name=="" && dataAll[i].volume==0 && dataAll[i].script==""){
-	str[i] = "No data available"
-    } else {
-	str[i] = '<div class="name">No.'+(i+1)+'　名前：'+dataAll[i].name+'</div>';
-	str[i] += '<div class="volume">発言量：'+dataAll[i].volume+' ';
-	if(sumSpeechVolume != 0){
-	    str[i] += "("+Math.floor((dataAll[i].volume / sumSpeechVolume) * 100)+"%)";
-	}
-	str[i] += '</div><div class="script">発言内容：'+dataAll[i].script+'</div>';
-    }
-}
-function outputStr(str) {
-    let s = '<hr>';
     for(let i=0; i<n; i++){
-	s += str[i];
-	s += '<hr>';
+	document.getElementById("label"+i).innerHTML = setLabel(i);
     }
-    return s;
+    for(let i=0; i<n; i++){
+	document.getElementById("outputStr"+i).innerHTML = str[i];
+    }
 }

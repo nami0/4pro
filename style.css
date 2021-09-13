@@ -5,6 +5,7 @@ body {
 h1 {
     color: coral;
     text-align: center;
+    font-weight: bold;
 }
 
 div {
@@ -16,7 +17,11 @@ textarea {
 }
 
 #output {
-    background-color: rgba(0,200,255,0.5);
+    text-align: start;
+}
+#outputStr {
+    text-align: start;
+    background-color: rgba(0,200,255,0.4);
 }
 #number {
     width: 3em;
