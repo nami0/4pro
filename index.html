@@ -38,9 +38,15 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-streaming@2.0.0"></script>
 
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
+
     <link rel="stylesheet" href="./style.css">
   </head>
   <body>
+    <!-- Option 1: Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW" crossorigin="anonymous"></script>
+    
     <h1>発言を取得する</h1>
     <div>
       <p>
@@ -61,10 +67,43 @@
       </p>
       <div id="result-div"></div>
       <div id="result-div2">0</div>
-      
-      <canvas id="myChart"></canvas>
 
-      <div id="output"></div>
+      <p>
+	表示 / 非表示　
+	<a class="btn btn-primary" data-bs-toggle="collapse" href="#multiCollapseExample1" role="button" aria-expanded="false" aria-controls="multiCollapseExample1">発言量</a>
+	<button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#multiCollapseExample2" aria-expanded="false" aria-controls="multiCollapseExample2">占有率</button>　
+	<button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target=".multi-collapse" aria-expanded="false" aria-controls="multiCollapseExample1 multiCollapseExample2">一括</button>
+      </p>
+      <div class="row">
+	<div class="col">
+	  <div class="show multi-collapse" id="multiCollapseExample1">
+	    <div class="card card-body">
+              <canvas id="myChart"></canvas>
+	    </div>
+	  </div>
+	</div>
+	<div class="col">
+	  <div class="show multi-collapse" id="multiCollapseExample2">
+	    <div class="card card-body">
+              <canvas id="myChart2"></canvas>
+	    </div>
+	  </div>
+	</div>
+      </div>
+
+     
+      <div class="container mt-5" id="outputAll">
+	<div class="row mt-4">
+	  <div class="col-3">
+	    <ul class="nav flex-column nav-pills me-3" id="output">	
+	    </ul>
+	  </div>
+	  <div class="col-9">
+	    <div class="tab-content" id="outputStr">
+	    </div>
+	  </div>
+	</div>
+      </div>
     </div>
 
     
