@@ -5,6 +5,9 @@ const setting = document.getElementById("setting");
 let user = document.getElementById("user");
 const send = document.getElementById("send");
 const reset = document.getElementById("reset");
+const collapseChart = document.getElementById("collapseChart");
+const multiCollapse1 = document.getElementById("multiCollapse1");
+const multiCollapse2 = document.getElementById("multiCollapse2");
 const output = document.getElementById("output");
 const outputStr = document.getElementById("outputStr");
 
@@ -31,12 +34,13 @@ firebase.database().ref(room).child("number").on("value",snapshot => {
     document.getElementById("userMax").innerHTML = 'No.<input type="number" id="user2" min="1" max='+n+' value="1"><br>'
     user = document.getElementById("user2");
     user.onchange = () => {
-	getLatestData();
+	getLatestData()
 	writeLabel();
+	writeHTML();
+	setChart();
     }
-    getLatestData();
+    getLatestData()
     writeLabel();
-    writeHTML();
 });
 let isLookMySpeechVolume;
 let isLookAllSpeechVolume;
@@ -51,7 +55,10 @@ firebase.database().ref(room).child("setting").on("value",snapshot => {
     isCautionAll = v.isCautionAll;
     cautionRange = v.cautionRange;
     writeSetting();
+    writeHTML();
+    setChart();
 });
+
 let s = '';
 let t = '';
 let str = [];
@@ -94,7 +101,7 @@ function setSpeechVolume(finalTranscript){
 	name: setLabel(user.value-1),
 	speechVolume: finalTranscript.length,
 	script: finalTranscript,
-	facilitator: true,
+	facilitator: false,
     });
 }
 //音声認識部分のHTML表示
@@ -107,9 +114,11 @@ function writeSpeechVolume(finalTranscript,interimTranscript){
 let data = [];
 let data2 = [];
 let rgb=[];
+var chart;
+var chart2;
+function setChart(){
 var ctx = document.getElementById('myChart').getContext('2d');
-var ctx2 = document.getElementById('myChart2').getContext('2d');
-var chart = new Chart(ctx, {
+chart = new Chart(ctx, {
     type: 'line',
     data: {
 	datasets: []
@@ -136,21 +145,32 @@ var chart = new Chart(ctx, {
 		    
 		    onRefresh: chart => {
 			getLatestData();
-			writeStr();
-			for(let i=0; i<n; i++) {
-			    if(chart.data.datasets[i] == undefined){
-				if(dataAll[i] != undefined){
-				    writeDatasets(i);
+			if(isLookAllSpeechVolume){
+			    writeAllStr();
+			    for(let i=0; i<n; i++) {
+				if(chart.data.datasets[i] == undefined){
+				    if(dataAll[i] != undefined){
+					writeDatasets(i,i);
+				    }
+				} else {
+				    chart.data.datasets[i].data.push(data[i]);
+				    chart.data.datasets[i].label = setLabel(i);
+				    updateYAxes();
 				}
+			    }
+			    for(let i=chart.data.datasets.length-1; i>=n; i--) {
+				chart.data.datasets.splice(i,1);
+			    }
+			} else if(isLookMySpeechVolume){
+			    writeMyStr();
+			    if(chart.data.datasets[0] == undefined){
+				writeDatasets(user.value-1,0);
 			    } else {
-				chart.data.datasets[i].data.push(data[i]);
-				chart.data.datasets[i].label = setLabel(i);
+				chart.data.datasets[0].data.push(data[user.value-1]);
+				chart.data.datasets[0].label = setLabel(user.value-1);
 				updateYAxes();
 			    }
-			}
-			for(let i=chart.data.datasets.length-1; i>=n; i--) {
-			    chart.data.datasets.splice(i,1);
-			}
+			}	
 		    }
 		}
 	    },
@@ -160,7 +180,13 @@ var chart = new Chart(ctx, {
 	}
     }
 });
-var chart2 = new Chart(ctx2, {
+    if(isLookAllSpeechVolume){
+	setChart2();
+    }
+}
+function setChart2(){
+var ctx2 = document.getElementById('myChart2').getContext('2d');
+chart2 = new Chart(ctx2, {
     type: 'line',
     data: {
 	datasets: []
@@ -187,19 +213,30 @@ var chart2 = new Chart(ctx2, {
 		    
 		    onRefresh: chart => {
 			getLatestData();
-			writeStr();
-			for(let i=0; i<n; i++) {
-			    if(chart2.data.datasets[i] == undefined){
-				if(dataAll[i] != undefined){
-				    writeDatasets(i);
+			if(isLookAllSpeechVolume){
+			    writeAllStr();
+			    for(let i=0; i<n; i++) {
+				if(chart2.data.datasets[i] == undefined){
+				    if(dataAll[i] != undefined){
+					writeDatasets(i,i);
+				    }
+				} else {
+				    chart2.data.datasets[i].data.push(data2[i]);
+				    chart2.data.datasets[i].label = setLabel(i);
 				}
-			    } else {
-				chart2.data.datasets[i].data.push(data2[i]);
-				chart2.data.datasets[i].label = setLabel(i);
 			    }
-			}
-			for(let i=chart2.data.datasets.length-1; i>=n; i--) {
-			    chart2.data.datasets.splice(i,1);
+			    for(let i=chart2.data.datasets.length-1; i>=n; i--) {
+				chart2.data.datasets.splice(i,1);
+			    }
+			} else if(isLookMySpeechVolume){
+			    writeMyStr();
+			    if(chart2.data.datasets[0] == undefined){
+				writeDatasets(user.value-1,0);
+			    } else {
+				chart2.data.datasets[0].data.push(data2[user.value-1]);
+				chart2.data.datasets[0].label = setLabel(user.value-1);
+				updateYAxes();
+			    }
 			}
 		    }
 		}
@@ -211,6 +248,7 @@ var chart2 = new Chart(ctx2, {
 	}
     }
 });
+}
 //データベースからデータを読み取る
 function getLatestData() {
     const dbRef = firebase.database().ref(room);
@@ -271,7 +309,7 @@ function setDatas() {
 	}
     }
 }
-function writeDatasets(i) {
+function writeDatasets(i,j) {
     if(rgb[i] == null){
 	rgb[i] = {
 	    r: randomColor(),
@@ -279,20 +317,23 @@ function writeDatasets(i) {
 	    b: randomColor(),
 	}
     }
-    chart.data.datasets[i] = ({
+    chart.data.datasets[j] = ({
 	label: setLabel(i),
 	borderColor: "rgba("+rgb[i].r+","+rgb[i].g+","+rgb[i].b+",1)",
 	backgroundColor:"rgba("+rgb[i].r+","+rgb[i].g+","+rgb[i].b+",0.4)",
 	data: [],
     });
-    chart2.data.datasets[i] = ({
-	label: setLabel(i),
-	borderColor: "rgba("+rgb[i].r+","+rgb[i].g+","+rgb[i].b+",1)",
-	backgroundColor:"rgba("+rgb[i].r+","+rgb[i].g+","+rgb[i].b+",0.4)",
-	data: [],
-    });
+    
+    if(chart2!=null){
+	chart2.data.datasets[j] = ({
+	    label: setLabel(i),
+	    borderColor: "rgba("+rgb[i].r+","+rgb[i].g+","+rgb[i].b+",1)",
+	    backgroundColor:"rgba("+rgb[i].r+","+rgb[i].g+","+rgb[i].b+",0.4)",
+	    data: [],
+	});
+	chart2.update();
+    }
     chart.update();
-    chart2.update();
 }
 function randomColor() {
     let rgb = Math.floor(Math.random() * (255 + 1));
@@ -317,11 +358,19 @@ function updateYAxes(){
 function writeHTML() {
     s = '';
     t = '';
-    writeTabHTML();
+    if(isLookAllSpeechVolume){
+	writeAllTabHTML();
+	writeCollapseShowAll();
+    } else if(isLookMySpeechVolume){
+	writeMyTabHTML();
+	writeCollapseShow();
+    } else {
+	writeCollapse();
+    }
     output.innerHTML = s;
     outputStr.innerHTML = t;
 }
-function writeTabHTML(){
+function writeAllTabHTML(){
     s += '<li class="nav-item">';
     s += '<a href="#output0" class="nav-link active" data-bs-toggle="tab" id="label0">'+setLabel(0)+'</a>';
     s += '</li>';
@@ -339,7 +388,31 @@ function writeTabHTML(){
 	t += '</div>';
     }
 }
-function writeStr() {
+function writeMyTabHTML(){
+    let i = user.value-1;
+    s += '<li class="nav-item">';
+    s += '<a href="#output0" class="nav-link active" data-bs-toggle="tab" id="label0">'+setLabel(i)+'</a>';
+    s += '</li>';
+    
+    t += '<div id="output0" class="tab-pane fade show active">';
+    t += '<div id="outputStr0"></div>'
+    t += '</div>';
+}
+function writeCollapseShowAll(){
+    collapseChart.innerHTML = '<p>表示 / 非表示　<a class="btn btn-primary" data-bs-toggle="collapse" href="#multiCollapseExample1" role="button" aria-expanded="false" aria-controls="multiCollapseExample1">発言量</a><button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#multiCollapseExample2" aria-expanded="false" aria-controls="multiCollapseExample2">占有率</button>　<button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target=".multi-collapse" aria-expanded="false" aria-controls="multiCollapseExample1 multiCollapseExample2">一括</button></p>';
+    multiCollapse1.innerHTML = '<div class="show multi-collapse" id="multiCollapseExample1"><div class="card card-body"><canvas id="myChart"></canvas></div></div>';
+    multiCollapse2.innerHTML = '<div class="show multi-collapse" id="multiCollapseExample2"><div class="card card-body"><canvas id="myChart2"></canvas></div></div>';
+}
+function writeCollapseShow(){
+    collapseChart.innerHTML = '<p>表示 / 非表示　<a class="btn btn-primary" data-bs-toggle="collapse" href="#multiCollapseExample1" role="button" aria-expanded="false" aria-controls="multiCollapseExample1">発言量</a></p>';
+    multiCollapse1.innerHTML = '<div class="show collapse" id="multiCollapseExample1"><div class="card card-body"><canvas id="myChart"></canvas></div></div>';
+    multiCollapse2.innerHTML = '<div class="collapse collapse" id="multiCollapseExample2"><div class="card card-body"><canvas id="myChart2"></canvas></div></div>';
+}
+function writeCollapse(){
+    multiCollapse1.innerHTML = '<div class="collapse multi-collapse" id="multiCollapseExample1"><div class="card card-body"><canvas id="myChart"></canvas></div></div>';
+    multiCollapse2.innerHTML = '<div class="collapse multi-collapse" id="multiCollapseExample2"><div class="card card-body"><canvas id="myChart2"></canvas></div></div>';
+}
+function writeAllStr() {
     for(let i=0; i<n; i++){
 	if(dataAll[i] === undefined){
 	    str[i] = "loading..."
@@ -361,6 +434,23 @@ function writeStr() {
 	document.getElementById("outputStr"+i).innerHTML = str[i];
     }
 }
+function writeMyStr() {
+    let i = user.value-1;
+    if(dataAll[i] === undefined){
+	str[i] = "loading..."
+    } else {
+	if(dataAll[i].name=="" && dataAll[i].volume==0 && dataAll[i].script==""){
+	    str[i] = "No data available"
+	} else {
+	    str[i] = 'No.'+(i+1)+'　名前：'+dataAll[i].name+'<br>';
+	    str[i] += '発言量：'+dataAll[i].volume+' ';
+	    str[i] += '('+ data2[i].y +'%)<br>';
+	    str[i] += '発言内容：'+dataAll[i].script;
+	}
+    }
+    document.getElementById("label0").innerHTML = setLabel(i);
+    document.getElementById("outputStr0").innerHTML = str[i];
+}
 function writeLabel(){
     let strN = '<div>人数:'+n+'人　あなた:'+setLabel(user.value-1)+'</div>';
     label.innerHTML = strN;
@@ -373,6 +463,7 @@ function writeSetting(){
     } else {
 	setting.innerHTML = "・発言量は見えない<br>"
     }
+    /*
     if(isAutoCaution){
 	setting.innerHTML += "・注意喚起は自動で行われる<br>";
     } else {
@@ -383,4 +474,5 @@ function writeSetting(){
     } else {
 	setting.innerHTML += "・注意喚起は個人にのみ伝えられる<br>";
     }
+    */
 }

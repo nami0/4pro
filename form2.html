@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <title>サンプル</title>
+
+    <!-- ライブラリを読み込む(firebase.js) -->
+    <!-- The core Firebase JS SDK is always required and must be listed first -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.7/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.7/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.7/firebase-database.js"></script>
+
+    <!-- TODO: Add SDKs for Firebase products that you want to use
+	 https://firebase.google.com/docs/web/setup#available-libraries -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.7/firebase-analytics.js"></script>
+
+    <script>
+      // Your web app's Firebase configuration
+      // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+      var firebaseConfig = {
+	  apiKey: "AIzaSyBLv8DhC9xe-Em-yQZsHXyczXs1Io_rSnU",
+	  authDomain: "use-speech-api-f563c.firebaseapp.com",
+	  databaseURL: "https://use-speech-api-f563c-default-rtdb.firebaseio.com",
+	  projectId: "use-speech-api-f563c",
+	  storageBucket: "use-speech-api-f563c.appspot.com",
+	  messagingSenderId: "109548445034",
+	  appId: "1:109548445034:web:6407a2596b561893041913",
+	  measurementId: "G-N0SGSRQNQL"
+      };
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      firebase.analytics();
+    </script>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="./style.css">
+  </head>
+  <body>
+    <!-- Option 1: Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW" crossorigin="anonymous"></script>
+
+    <h1>設定</h1>
+    <div>
+      <form>
+	参加者が自分の発言量を見ることができる
+	<input type="checkbox" id="visible"><br>
+	参加者が全員の発言量を見ることができる
+	<input type="checkbox" id="visibleAll"><br>
+	<br>
+	注意喚起を手動で行う　　　　　　　　　
+	<input type="checkbox" id="caution"><br>
+	注意喚起を全員に周知する　　　　　　　
+	<input type="checkbox" id="cautionAll"><br>
+	※自動の場合　　　　　　　　　　　　　　<br>
+	注意喚起を行う範囲を設定する<br>
+	<div id="auto"></div>
+      </form>
+      <button id="send" onClick="send();">送信</button>
+      <div id="output"></div>
+    </div>
+
+    <script type="text/javascript">
+      const database = firebase.database();
+      const room = "speech_room";
+      const auto = document.getElementById("auto");
+      const output = document.getElementById("output");
+      let n;
+      let isLookMySpeechVolume = true;
+      let isLookAllSpeechVolume = false;
+      let isAutoCaution = true;
+      let isCautionAll = false;
+      let cautionRange = [];
+
+      getN();
+
+      const visible = document.getElementById("visible");
+      const visibleAll = document.getElementById("visibleAll");
+      const caution = document.getElementById("caution");
+      const cautionAll = document.getElementById("cautionAll");
+      
+      function getN(){
+	  database.ref(room).child("number").get().then((snapshot) => {
+	      if (snapshot.exists()) {
+		  n = snapshot.val().number;
+		  writeOutput(n);
+	      } else {
+	      }
+	  }).catch((error) => {
+	      console.error(error);
+	  });
+      }
+      
+      function writeOutput(n){
+	  cautionRange = [Math.floor(100-100/(3*n)),Math.floor(100-100/(1.5*n)),Math.floor(100/(1.5*n)),Math.floor(100/(3*n))];
+	  let str = '（人数：'+n+'人　一人当たり：'+Math.floor(100/n)+'％）<br>'
+	  str += '話すぎな人へ　強めの注意　<input type="number" id="cautionRange0" min="0" max="100" value='+cautionRange[0]+'>％以上<br>'
+	  str += '　　　　　　　弱めの注意　<input type="number" id="cautionRange1" min="0" max="100" value='+cautionRange[1]+'>％以上<br>'
+	  str += '話さない人へ　弱めの注意　<input type="number" id="cautionRange2" min="0" max="100" value='+cautionRange[2]+'>％以下<br>'
+	  str += '　　　　　　　強めの注意　<input type="number" id="cautionRange3" min="0" max="100" value='+cautionRange[3]+'>％以下<br>'
+	  auto.innerHTML = str;
+      }
+      
+      function send(){
+	  const cautionRange0 = document.getElementById("cautionRange0").value;
+	  const cautionRange1 = document.getElementById("cautionRange1").value;
+	  const cautionRange2 = document.getElementById("cautionRange2").value;
+	  const cautionRange3 = document.getElementById("cautionRange3").value;
+          if (name.value == ""){
+              alert("全て入力してください");
+          }else{
+	      if(!visible.checked) isLookMySpeechVolume = false;
+	      if(visibleAll.checked) isLookAllSpeechVolume = true;
+	      if(!caution.checked) isAutoCaution = false;
+	      if(cautionAll.checked) isCautionAll = true;
+	      cautionRange = [cautionRange0,cautionRange1,cautionRange2,cautionRange3];
+	      database.ref(room+"/"+"setting").set({
+		  isLookMySpeechVolume : isLookMySpeechVolume,
+		  isLookAllSpeechVolume : isLookAllSpeechVolume,
+		  isAutoCaution : isAutoCaution,
+		  isCautionAll : isCautionAll,
+		  cautionRange : cautionRange,
+	      });
+          }
+	  output.innerHTML = "<a href='index.html'>次へ</a>";
+      }
+    </script>
+
+  </body>
+</html>
