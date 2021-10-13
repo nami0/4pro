@@ -32,3 +32,6 @@ textarea {
 #name{
     width: 6em;
 }
+#cautionBtnResult{
+    color: red;
+}

@@ -1,10 +1,12 @@
 var database = firebase.database();
 let room = "speech_room";
-const label = document.getElementById("label");
+const allElements = document.getElementById("allElements");
 const setting = document.getElementById("setting");
-let user = document.getElementById("user");
-const send = document.getElementById("send");
+const number = document.getElementById("number");
+const user = document.getElementById("user");
+const name = document.getElementById("name");
 const reset = document.getElementById("reset");
+const cautionResult = document.getElementById("cautionResult");
 const collapseChart = document.getElementById("collapseChart");
 const multiCollapse1 = document.getElementById("multiCollapse1");
 const multiCollapse2 = document.getElementById("multiCollapse2");
@@ -31,21 +33,14 @@ let finalTranscript = ''; // 確定した(黒の)認識結果
 let n;
 firebase.database().ref(room).child("number").on("value",snapshot => {
     n = snapshot.val().number;
-    document.getElementById("userMax").innerHTML = 'No.<input type="number" id="user2" min="1" max='+n+' value="1"><br>'
-    user = document.getElementById("user2");
-    user.onchange = () => {
-	getLatestData()
-	writeLabel();
-	writeHTML();
-	setChart();
-    }
-    getLatestData()
-    writeLabel();
+    number.value = n;
 });
 let isLookMySpeechVolume;
 let isLookAllSpeechVolume;
 let isAutoCaution;
 let isCautionAll;
+let isText;
+let isColor;
 let cautionRange;
 firebase.database().ref(room).child("setting").on("value",snapshot => {
     let v = snapshot.val();
@@ -53,10 +48,13 @@ firebase.database().ref(room).child("setting").on("value",snapshot => {
     isLookAllSpeechVolume = v.isLookAllSpeechVolume;
     isAutoCaution = v.isAutoCaution;
     isCautionAll = v.isCautionAll;
+    isText = v.isText;
+    isColor = v.isColor;
     cautionRange = v.cautionRange;
     writeSetting();
     writeHTML();
     setChart();
+    setChart2();
 });
 
 let s = '';
@@ -145,6 +143,7 @@ chart = new Chart(ctx, {
 		    
 		    onRefresh: chart => {
 			getLatestData();
+			writeCaution();
 			if(isLookAllSpeechVolume){
 			    writeAllStr();
 			    for(let i=0; i<n; i++) {
@@ -180,9 +179,6 @@ chart = new Chart(ctx, {
 	}
     }
 });
-    if(isLookAllSpeechVolume){
-	setChart2();
-    }
 }
 function setChart2(){
 var ctx2 = document.getElementById('myChart2').getContext('2d');
@@ -213,6 +209,7 @@ chart2 = new Chart(ctx2, {
 		    
 		    onRefresh: chart => {
 			getLatestData();
+			writeCaution();
 			if(isLookAllSpeechVolume){
 			    writeAllStr();
 			    for(let i=0; i<n; i++) {
@@ -323,17 +320,14 @@ function writeDatasets(i,j) {
 	backgroundColor:"rgba("+rgb[i].r+","+rgb[i].g+","+rgb[i].b+",0.4)",
 	data: [],
     });
-    
-    if(chart2!=null){
-	chart2.data.datasets[j] = ({
-	    label: setLabel(i),
-	    borderColor: "rgba("+rgb[i].r+","+rgb[i].g+","+rgb[i].b+",1)",
-	    backgroundColor:"rgba("+rgb[i].r+","+rgb[i].g+","+rgb[i].b+",0.4)",
-	    data: [],
-	});
-	chart2.update();
-    }
+    chart2.data.datasets[j] = ({
+	label: setLabel(i),
+	borderColor: "rgba("+rgb[i].r+","+rgb[i].g+","+rgb[i].b+",1)",
+	backgroundColor:"rgba("+rgb[i].r+","+rgb[i].g+","+rgb[i].b+",0.4)",
+	data: [],
+    });
     chart.update();
+    chart2.update();
 }
 function randomColor() {
     let rgb = Math.floor(Math.random() * (255 + 1));
@@ -363,7 +357,7 @@ function writeHTML() {
 	writeCollapseShowAll();
     } else if(isLookMySpeechVolume){
 	writeMyTabHTML();
-	writeCollapseShow();
+	writeCollapseShowAll();
     } else {
 	writeCollapse();
     }
@@ -451,10 +445,6 @@ function writeMyStr() {
     document.getElementById("label0").innerHTML = setLabel(i);
     document.getElementById("outputStr0").innerHTML = str[i];
 }
-function writeLabel(){
-    let strN = '<div>人数:'+n+'人　あなた:'+setLabel(user.value-1)+'</div>';
-    label.innerHTML = strN;
-}
 function writeSetting(){
     if(isLookAllSpeechVolume){
 	setting.innerHTML = "・全員の発言量が見える<br>";
@@ -463,7 +453,6 @@ function writeSetting(){
     } else {
 	setting.innerHTML = "・発言量は見えない<br>"
     }
-    /*
     if(isAutoCaution){
 	setting.innerHTML += "・注意喚起は自動で行われる<br>";
     } else {
@@ -474,5 +463,150 @@ function writeSetting(){
     } else {
 	setting.innerHTML += "・注意喚起は個人にのみ伝えられる<br>";
     }
-    */
+}
+let alpha = 1;
+let alphaBack = 0;
+function writeCaution(){
+    cautionResult.innerHTML = "";
+    let allVolume = 0;
+    for(let i=0; i<n; i++){
+	if(dataAll[i] != null){
+	    allVolume += dataAll[i].volume;
+	}
+    }
+    if(isAutoCaution){
+	if(allVolume>100){
+	    if(isText){
+		if(isCautionAll){
+		    for(let i=0; i<n; i++){
+			if(data2[i].y >= cautionRange[0]){
+			    cautionStrAuto(i+1,'over');
+			}
+			if(data2[i].y <= cautionRange[1]){
+			    cautionStrAuto(i+1,'under');
+			}
+		    }
+		} else {
+		    if(data2[user.value-1].y >= cautionRange[0]){
+			cautionStrAuto(user.value,'over');
+		    }
+		    if(data2[user.value-1].y <= cautionRange[1]){
+			cautionStrAuto(user.value,'under');
+		    }
+		}
+	    }
+	    if(isColor){
+		if(data2[user.value-1].y >= cautionRange[0]){
+		    allElements.style.color = "rgba(0,0,0,"+alpha+")";
+		    alpha -= 0.005;
+		} else {
+		    alpha = 1;
+		    allElements.style.color = "rgba(0,0,0,1)";
+		}
+		if(data2[user.value-1].y <= cautionRange[1]){
+		    allElements.style.backgroundColor = "rgba(0,0,0,"+alphaBack+")";
+		    alphaBack += 0.005;
+		} else {
+		    alphaBack = 0;
+		    allElements.style.backgroundColor = "rgba(0,0,0,0)"
+		}
+	    }
+	}
+    } else {
+	let cUser;
+	let cColorUser;
+	let cVolume
+	database.ref(room).child("caution").on("value",snapshot => {
+	    cUser = snapshot.val().user;
+	    cColorUser = snapshot.val().colorUser;
+	    cVolume = snapshot.val().volume;
+	});
+	if(cUser!=null){
+	    for(let i=0; i<n; i++){
+		if(cUser[i]){
+		    if(isCautionAll){
+			if(user.value != 0){
+			    cautionStr(i+1,cVolume[i]);
+			}
+		    } else {
+			if(user.value == i+1){
+			    cautionStr(user.value,cVolume[i]);
+			}	
+		    }
+		}
+	    }
+	}
+	if(cColorUser!=null){
+	    for(let i=0; i<n; i++){
+		if(cColorUser[i]){
+		    if(isCautionAll){
+			if(user.value != 0){
+			}
+		    } else {
+			if(user.value == i+1){
+			    if(cVolume[i]=="over"){
+				allElements.style.color = "rgba(0,0,0,"+alpha+")";
+				alpha -= 0.005;
+			    } else {
+				allElements.style.backgroundColor = "rgba(0,0,0,"+alphaBack+")";
+				alphaBack += 0.005;
+			    }
+			}
+		    }
+		} else {
+		    if(user.value == i+1){
+			alpha = 1;
+			alphaBack = 0;
+			allElements.style.color = "rgba(0,0,0,1)";
+			allElements.style.backgroundColor = "rgba(0,0,0,0)";
+		    }
+		}
+	    }
+	}
+    }
+}
+function cautionStrAuto(cUser,cVolume){
+    if(cVolume == 'over'){
+	cautionResult.innerHTML += "注意喚起："+setLabel(cUser-1)+"さん、喋りすぎです！<br>";
+    }　else if(cVolume == 'under') {
+	cautionResult.innerHTML += "注意喚起："+setLabel(cUser-1)+"さん、もっと喋って！<br>";
+    } else {
+	cautionResult.innerHTML += "";
+    }
+}
+function cautionStr(cUser,cVolume){
+    if(cVolume == 'over'){
+	//alert("注意喚起："+setLabel(cUser-1)+"さん、喋りすぎ！");
+	cautionResult.innerHTML += "注意喚起："+setLabel(cUser-1)+"さん、喋りすぎ！<br>";
+    }　else if(cVolume == 'under') {
+	//alert("注意喚起："+setLabel(cUser-1)+"さん、もっと喋って！");
+	cautionResult.innerHTML += "注意喚起："+setLabel(cUser-1)+"さん、もっと喋って！<br>";
+    }
+}
+function getUrlVars() {
+    var vars = [],
+        max = 0,
+        hash = "",
+        array = "";
+    var url = window.location.search;
+
+    hash = url.slice(1).split("&");
+    max = hash.length;
+    for (var i = 0; i < max; i++) {
+        array = hash[i].split("=");
+        vars.push(array[0]);
+        vars[array[0]] = decodeURI(array[1]);
+    }
+    return vars;
+}
+window.onload = function() {
+    para = getUrlVars();
+    userID = para["user"];
+    if (user !== undefined) {
+        user.value = userID;
+    }
+    nameID = para["name"];
+    if (name !== undefined) {
+        name.value = nameID;
+    }
 }
