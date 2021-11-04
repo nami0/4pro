@@ -7,6 +7,16 @@ h1 {
     text-align: center;
     font-weight: bold;
 }
+h3 {
+    color: coral;
+    text-align: center;
+}
+.accordion-button {
+    color: black;
+    text-align: center;
+    font-size: 15px;
+    width: 20em;
+}
 
 div {
     text-align: center;
@@ -32,6 +42,23 @@ textarea {
 #name{
     width: 6em;
 }
+#result-div2{
+    width: 3em;
+}
 #cautionBtnResult{
     color: red;
+}
+#result-div{
+    height: 70px;
+    border: 1px solid #000;
+    overflow-y: scroll;
+}
+#cautionResult{
+    font-size: 25px;
+    font-weight: bold;
+    color: red;
+}
+#isRecognition{
+    font-size: 15px;
+    font-weight: lighter;
 }

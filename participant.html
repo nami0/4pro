@@ -3,7 +3,7 @@
   <head>  
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speech App</title>
+    <title>Participant</title>
 
     <!-- ライブラリを読み込む(firebase.js) -->
     <!-- The core Firebase JS SDK is always required and must be listed first -->
@@ -48,46 +48,34 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW" crossorigin="anonymous"></script>
     
     <div id="allElements">
-      <h1>発言を取得する</h1>
       <p>
-	<div>
-	  人数<input type="number" id="number" readonly /><br>
+	<h1>発言を取得する</h1>
+      </p>
+      <p>
+	<div id="btn-area">
+	  音声認識　 
+	  <button id="start-btn" class="btn btn-primary" data-bs-toggle="button" onClick="start();">開始</button>
+	  <button id="stop-btn" class="btn btn-primary" onClick="stop();">終了</button>
 	</div>
-	No.<input type="number" id="user" readonly />
-	名前<input type="text" id="name" readonly /><br>
+	<div id="isRecognition"></div>
       </p>
-      <p>
-	<div id="label"></div>
-      </p>
-      <p>
-	<h5>現在の設定</h5>
-	<div id="setting"></div>
-      </p>
-      <p>
-	音声認識　
-	<button id="start-btn" onClick="start();">start</button>
-	<button id="stop-btn" onClick="stop();">stop</button>
-	　　
-	<button id="reset" onClick="resetData();">reset</button>
-      </p>
+      <div>発言量：<input type="number" id="result-div2" value=0 readonly /></div>
+      <div class="col-10 mx-auto" id="result-div"></div>
+      <br>
+      
       <div id="cautionResult"></div>
-      <div id="result-div"></div>
-      <div id="result-div2">0</div>
+      
       <div id="collapseChart"></div>
 
-
-
-      
-      
       <div class="row">
-	<div class="col" id="multiCollapse1">
+	<div class="col-6 mx-auto" id="multiCollapse1">
 	  <div class="collapse multi-collapse" id="multiCollapseExample1">
 	    <div class="card card-body">
               <canvas id="myChart"></canvas>
 	    </div>
 	  </div>
 	</div>
-	<div class="col" id="multiCollapse2">
+	<div class="col-6 mx-auto" id="multiCollapse2">
 	  <div class="collapse multi-collapse" id="multiCollapseExample2">
 	    <div class="card card-body">
               <canvas id="myChart2"></canvas>
@@ -95,7 +83,6 @@
 	  </div>
 	</div>
       </div>
-
       
       <div class="container mt-5" id="outputAll">
 	<div class="row mt-4">

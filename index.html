@@ -2,7 +2,7 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8">
-    <title>サンプル</title>
+    <title>Form</title>
 
     <!-- ライブラリを読み込む(firebase.js) -->
     <!-- The core Firebase JS SDK is always required and must be listed first -->
@@ -41,100 +41,136 @@
     <!-- Option 1: Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW" crossorigin="anonymous"></script>
 
-    <h1>入力フォーム</h1>
+    <p>
+      <h1>入力フォーム</h1>
+    </p>
     <div>
       <form>
-	あなたは議長ですか？
-	<input type="checkbox" id="facilitator">
 	<p>
-	<div id="data"></div>
-	No.<input type="number" id="user" min="1">
-	名前<input type="text" id="name"><br>
+	  No.<input type="number" id="user" min="1">
+	  名前<input type="text" id="name">
 	</p>
+	あなたはファシリテーターですか？<br>
+	<input class="form-check-input" type="radio" name="flexRadioDefault" id="facilitatorY">
+	<label class="form-check-label" for="flexRadioDefault1">はい　</label>
+	<input class="form-check-input" type="radio" name="flexRadioDefault" id="facilitatorN" checked>
+	<label class="form-check-label" for="flexRadioDefault2">いいえ</label>
+	<br><br>
+	
 	<div id="setting"></div>
       </form>
+      
       <button id="send" onClick="send();">送信</button>
-      <div id="output"></div>
+      <div id="nextLink"></div>
     </div>
+    
     <script type="text/javascript">
       var database = firebase.database();
       let room = "speech_room";
 
-      const facilitator = document.getElementById("facilitator");
-      const data = document.getElementById("data");
+      const facilitatorY = document.getElementById("facilitatorY");
+      const facilitatorN = document.getElementById("facilitatorN");
       const user = document.getElementById("user");
       const name = document.getElementById("name");
       const setting = document.getElementById("setting");
-      const output = document.getElementById("output");
-      
+      const nextLink = document.getElementById("nextLink");
+      const urlbase1 = "./facilitator.html";
+      const urlbase2 = "./participant.html";
+
       let n=1;
-      let isLookMySpeechVolume = false;
-      let isLookAllSpeechVolume = false;
+      let isLookSpeechVolume = "";
       let isAutoCaution = false;
       let isCautionAll = false;
       let isText = false;
       let isColor = false;
+      let isAudio = false;
       let cautionRange = [];
 
       let my_url;
       
-      facilitator.onclick = () => {
-	  if(facilitator.checked){
-	      data.innerHTML = '人数<input type="number" id="number" min="1" value="1">';
-	      const number = document.getElementById("number");
-	      number.onchange = () => {
-		  n = number.value;
-		  if(cautionAuto.checked){
-		      writeOutput(n);
-		  }
+      facilitatorY.onclick = () => {
+	  setting.innerHTML = '<h3>設定を入力</h3><p>人数 <input type="number" id="number" min="1" value="1"><br></p><p><strong>発言量データの表示</strong><br><input class="form-check-input" type="radio" name="visible" id="visibleNo"> <label class="form-check-label" for="flexRadioDefault1">表示させない</label>　<input class="form-check-input" type="radio" name="visible" id="visibleOne" checked> <label class="form-check-label" for="flexRadioDefault2">自分のデータのみ</label>　<input class="form-check-input" type="radio" name="visible" id="visibleAll"> <label class="form-check-label" for="flexRadioDefault3">全員分</label></p><p><input type="checkbox" id="cautionAuto"> 注意喚起を自動で行う　　　　　　　　　<br><input type="checkbox" id="cautionAll"> 注意喚起(テキスト)を全員に周知する 　　</p><div id="auto"></div>';
+	  const number = document.getElementById("number");
+	  number.onchange = () => {
+	      n = number.value;
+	      if(cautionAuto.checked){
+		  writeOutput(n);
 	      }
-	      setting.innerHTML = '<h5>設定</h5>参加者が自分の発言量を見ることができる<input type="checkbox" id="visible"><br>参加者が全員の発言量を見ることができる<input type="checkbox" id="visibleAll"><br><br>注意喚起を自動で行う　　　　　　　　　<input type="checkbox" id="cautionAuto"><br>注意喚起を全員に周知する　　　　　　　<input type="checkbox" id="cautionAll"><br><div id="auto"></div>';
-	      const visible = document.getElementById("visible");
-	      const visibleAll = document.getElementById("visibleAll");
-	      const cautionAuto = document.getElementById("cautionAuto");
-	      const cautionAll = document.getElementById("cautionAll");
-	      const auto = document.getElementById("auto");
-	      cautionAuto.onclick = () => {
-		  if(cautionAuto.checked){
-		      writeOutput(n)
-		  } else {
-		      cautionRange = [];
-		      auto.innerHTML = '';
-		  }
-	      }
+	  }
+	  const visibleNo = document.getElementById("visibleNo");
+	  const visibleOne = document.getElementById("visibleOne");
+	  const visibleAll = document.getElementById("visibleAll");
+	  const cautionAuto = document.getElementById("cautionAuto");
+	  const cautionAll = document.getElementById("cautionAll");
+	  const auto = document.getElementById("auto");
+	  cautionAuto.onclick = () => {
 	      if(cautionAuto.checked){
 		  writeOutput(n)
+	      } else {
+		  cautionRange = [];
+		  auto.innerHTML = '';
 	      }
-	      function writeOutput(n){
-		  //cautionRange = [Math.floor(100-100/(3*n)),Math.floor(100-100/(1.5*n)),Math.floor(100/(1.5*n)),Math.floor(100/(3*n))];
-		  if(n==1){
-		      cautionRange = [100,0];
-		  } else if(n==2){
-		      cautionRange = [75,25];
-		  } else {
-		      cautionRange = [Math.floor(100/n+100/n-100/(0.5*n*n)),Math.floor(100/(0.5*n*n))];
-		  }
-		  let str = '※自動の場合　　　　　　　　　　　　　　<br>　　　　　　　　　　　　テキスト<input type="checkbox" id="text" checked="checked"><br>　　　　　　　　　　　　　カラー<input type="checkbox" id="color"><br>注意喚起を行う範囲を設定する<br>';
-		  str += '（人数：'+n+'人　一人当たり平均：'+Math.floor(100/n)+'％）<br>'
-		  //str += '話すぎな人へ　強めの注意　<input type="number" id="cautionRange0" min="0" max="100" value='+cautionRange[0]+'>％以上<br>'
-		  //str += '　　　　　　　弱めの注意　<input type="number" id="cautionRange1" min="0" max="100" value='+cautionRange[1]+'>％以上<br>'
-		  //str += '話さない人へ　弱めの注意　<input type="number" id="cautionRange2" min="0" max="100" value='+cautionRange[2]+'>％以下<br>'
-		  //str += '　　　　　　　強めの注意　<input type="number" id="cautionRange3" min="0" max="100" value='+cautionRange[3]+'>％以下<br>'
-		  str += '喋りすぎ　<input type="number" id="cautionRange0" min="0" max="100" value='+cautionRange[0]+'>％以上<br>'
-		  str += '喋らない　<input type="number" id="cautionRange1" min="0" max="100" value='+cautionRange[1]+'>％以下<br>'
-		  auto.innerHTML = str;
-	      }
-	  } else {
-	      data.innerHTML = '';
-	      setting.innerHTML = '';
 	  }
+	  if(cautionAuto.checked){
+	      writeOutput(n)
+	  }
+	  function writeOutput(n){
+	      //cautionRange = [Math.floor(100-100/(3*n)),Math.floor(100-100/(1.5*n)),Math.floor(100/(1.5*n)),Math.floor(100/(3*n))];
+	      if(n==1){
+		  cautionRange = [100,0];
+	      } else if(n==2){
+		  cautionRange = [75,25];
+	      } else {
+		  cautionRange = [Math.floor(100/n+100/n-100/(0.5*n*n)),Math.floor(100/(0.5*n*n))];
+	      }
+	      let str = '<p>※自動の場合　　　　　　　　　　　　<br>　注意喚起の方法　　　<input type="checkbox" id="text" checked="checked"> テキスト<br>　　　　　　　　　　　<input type="checkbox" id="color"> カラー　<br>　　　　　　　　　　　<input type="checkbox" id="audio"> 音声　　<br></p><p>注意喚起を行う範囲を設定する<br>';
+	      str += '（人数：'+n+'人　一人当たり平均：'+Math.floor(100/n)+'％）<br></p>'
+	      //str += '話すぎな人へ　強めの注意　<input type="number" id="cautionRange0" min="0" max="100" value='+cautionRange[0]+'>％以上<br>'
+	      //str += '　　　　　　　弱めの注意　<input type="number" id="cautionRange1" min="0" max="100" value='+cautionRange[1]+'>％以上<br>'
+	      //str += '話さない人へ　弱めの注意　<input type="number" id="cautionRange2" min="0" max="100" value='+cautionRange[2]+'>％以下<br>'
+	      //str += '　　　　　　　強めの注意　<input type="number" id="cautionRange3" min="0" max="100" value='+cautionRange[3]+'>％以下<br>'
+	      str += '　<input type="number" id="cautionRange0" min="0" max="100" value='+cautionRange[0]+'>％以上だと喋りすぎ　<br>'
+	      str += '　<input type="number" id="cautionRange1" min="0" max="100" value='+cautionRange[1]+'>％以下だと喋らなすぎ<br></p>'
+	      auto.innerHTML = str;
+	  }
+      }
+      facilitatorN.onclick = () => {	  
+	  setting.innerHTML = '';
       }
       
       function send(){
-	  if(facilitator.checked){
+	  if(facilitatorY.checked){
 	      if (user.value == null || number.value == null || name.value == ""){
-		  alert("人数,No.,名前を入力してください");    //エラーメッセージを出力
+		  alert("人数,No.,名前を入力してください");
               } else {
+		  if(visibleNo.checked) isLookSpeechVolume = "no";
+		  if(visibleOne.checked) isLookSpeechVolume = "one";
+		  if(visibleAll.checked) isLookSpeechVolume = "All";
+		  if(cautionAuto.checked) isAutoCaution = true;
+		  if(cautionAll.checked) isCautionAll = true;
+		  if(cautionAuto.checked){
+		      const text = document.getElementById("text");
+		      const color = document.getElementById("color");
+		      const audio = document.getElementById("audio");
+		      const cautionRange0 = document.getElementById("cautionRange0").value;
+		      const cautionRange1 = document.getElementById("cautionRange1").value;
+		      //const cautionRange2 = document.getElementById("cautionRange2").value;
+		      //const cautionRange3 = document.getElementById("cautionRange3").value;
+		      //cautionRange = [cautionRange0,cautionRange1,cautionRange2,cautionRange3];
+		      if(text.checked) isText = true;
+		      if(color.checked) isColor = true;
+		      if(audio.checked) isAudio = true;
+		      cautionRange = [cautionRange0,cautionRange1];
+		  }
+		  database.ref(room+"/"+"setting").set({
+		      isLookSpeechVolume : isLookSpeechVolume,
+		      isAutoCaution : isAutoCaution,
+		      isCautionAll : isCautionAll,
+		      isText : isText,
+		      isColor : isColor,
+		      isAudio : isAudio,
+		      cautionRange : cautionRange,
+		  });
 		  database.ref(room+'/'+"number").set({
 		      number : number.value,
 		  });
@@ -142,38 +178,13 @@
 		      name: name.value,
 		      speechVolume: 0,
 		      script: '',
-		      facilitator: true,
 		  });
-		  //const urlbase1 = "https://nami0.github.io/4pro/facilitator.html";
-		  const urlbase1 = "./facilitator.html";
-		  my_url = urlbase1 + "?user=" + user.value + "&name=" + name.value + "&number=" + number.value;
-		  output.innerHTML = '<a href='+my_url+'>次へ</a>';
+		  
+		  if(cautionAuto.checked) my_url = urlbase2 + "?user=" + user.value + "&name=" + name.value;
+		  else my_url = urlbase1 + "?user=" + user.value + "&name=" + name.value + "&number=" + number.value;
+		  nextLink.innerHTML = '<br><a class="btn btn-primary" href='+my_url+' role="button">　 次へ 　</a>';
 	      }
-	      if(visible.checked) isLookMySpeechVolume = true;
-	      if(visibleAll.checked) isLookAllSpeechVolume = true;
-	      if(cautionAuto.checked) isAutoCaution = true;
-	      if(cautionAll.checked) isCautionAll = true;
-	      if(cautionAuto.checked){
-		  const text = document.getElementById("text");
-		  const color = document.getElementById("color");
-		  const cautionRange0 = document.getElementById("cautionRange0").value;
-		  const cautionRange1 = document.getElementById("cautionRange1").value;
-		  //const cautionRange2 = document.getElementById("cautionRange2").value;
-		  //const cautionRange3 = document.getElementById("cautionRange3").value;
-		  //cautionRange = [cautionRange0,cautionRange1,cautionRange2,cautionRange3];
-		  if(text.checked) isText = true;
-		  if(color.checked) isColor = true;
-		  cautionRange = [cautionRange0,cautionRange1];
-	      }
-	      database.ref(room+"/"+"setting").set({
-		  isLookMySpeechVolume : isLookMySpeechVolume,
-		  isLookAllSpeechVolume : isLookAllSpeechVolume,
-		  isAutoCaution : isAutoCaution,
-		  isCautionAll : isCautionAll,
-		  isText : isText,
-		  isColor : isColor,
-		  cautionRange : cautionRange,
-	      });
+	      
 	  } else {
 	      if (user.value == null || name.value == ""){
 		  alert("No.,名前を入力してください");    //エラーメッセージを出力
@@ -182,15 +193,12 @@
 		      name: name.value,
 		      speechVolume: 0,
 		      script: '',
-		      facilitator: false,
 		  });
-		  //const urlbase2 = "https://nami0.github.io/4pro/participant.html";
-		  const urlbase2 = "./participant.html";
 		  my_url = urlbase2 + "?user=" + user.value + "&name=" + name.value;
-		  output.innerHTML = '<a href='+my_url+'>次へ</a>';
+		  nextLink.innerHTML = '<br><a class="btn btn-primary" href='+my_url+' role="button">　 次へ 　</a>';
 	      }
 	  }
       }
-    </script>
+      </script>
   </body>
 </html>

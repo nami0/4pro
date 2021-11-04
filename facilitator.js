@@ -4,7 +4,6 @@ const setting = document.getElementById("setting");
 const number = document.getElementById("number");
 const user = document.getElementById("user");
 const name = document.getElementById("name");
-const reset = document.getElementById("reset");
 const caution = document.getElementById("caution");
 let cautionName;
 let cautionStopName;
@@ -19,6 +18,8 @@ const urlbase = "./facilitator.html";
 //音声認識
 const startBtn = document.querySelector('#start-btn');
 const stopBtn = document.querySelector('#stop-btn');
+const btnArea = document.querySelector('#btn-area');
+const isRecognition = document.getElementById('isRecognition');
 const getBtn = document.querySelector('#get-btn');
 const resultDiv = document.querySelector('#result-div');
 const resultDiv2 = document.querySelector('#result-div2');
@@ -39,29 +40,34 @@ firebase.database().ref(room).child("number").on("value",snapshot => {
     getLatestData();
     writeHTML();
 });
-let isLookMySpeechVolume;
-let isLookAllSpeechVolume;
+let isLookSpeechVolume;
 let isAutoCaution;
 let isCautionAll;
+let isText;
+let isColor;
+let isAudio;
 let cautionRange;
 firebase.database().ref(room).child("setting").on("value",snapshot => {
     let v = snapshot.val();
-    isLookMySpeechVolume = v.isLookMySpeechVolume;
-    isLookAllSpeechVolume = v.isLookAllSpeechVolume;
+    isLookSpeechVolume = v.isLookSpeechVolume;
     isAutoCaution = v.isAutoCaution;
     isCautionAll = v.isCautionAll;
+    isText = v.isText;
+    isColor = v.isColor;
+    isAudio = v.isAudio;
     cautionRange = v.cautionRange;
     writeSetting();
     if(!isAutoCaution){
-	caution.innerHTML = '<select id="cautionName"></select>を<button id="caution_btn" onClick="cautionStart();">テキスト</button><button id="cautionColor_btn" onClick="cautionColorStart();">カラー</button>で注意する<br><select id="cautionStopName"></select>の<button id="cautionStop_btn" onClick="cautionStop();">注意をやめる</button>';
+	caution.innerHTML = '<select id="cautionName"></select> を <button id="caution_btn" class="btn btn-warning" onClick="cautionStart();">テキスト</button> <button id="cautionColor_btn" class="btn btn-warning" onClick="cautionColorStart();">カラー</button> <button id="cautionAudio_btn" class="btn btn-warning" onClick="cautionAudioStart();">音声</button> で注意する<br><select id="cautionStopName"></select> の <button id="cautionStop_btn" class="btn btn-success" onClick="cautionStop();">注意をやめる</button>';
 	for(let i=1; i<=n; i++)
-	    cautionBtnResult.innerHTML += '<div id="cautionBtnResult'+i+'"></div>';
+	    cautionBtnResult.innerHTML += '<div id="cautionBtnResult'+i+'"></div><div id="cautionBtnResult_color'+i+'"></div><div id="cautionBtnResult_audio'+i+'"></div>';
 	cautionName = document.getElementById("cautionName");
 	cautionStopName = document.getElementById("cautionStopName");
     } 
 });
 let cautionUser = [];
 let cautionColorUser = [];
+let cautionAudioUser = 0;
 let cautionVolume = [];
 
 let s = '';
@@ -82,16 +88,30 @@ recognition.onresult = (event) => {
 	    interimTranscript = transcript;
 	}
     }
+    isRecognition.innerHTML = "音声を認識中...";
     setSpeechVolume(finalTranscript);
     getLatestData();
     writeSpeechVolume(finalTranscript,interimTranscript);
 }
+recognition.onsoundstart = function(){
+    isRecognition.innerHTML = "音声を認識中...";
+}
+recognition.onnomatch = function(){
+    isRecognition.innerHTML = "もう一度試してください";
+};
+recognition.onerror= function(){
+    isRecognition.innerHTML = "エラー";
+};
+recognition.onsoundend = function(){
+    isRecognition.innerHTML = "停止中";
+};
 
 function start(){
     recognition.start();
 }
 function stop(){
     recognition.stop();
+    btnArea.innerHTML = '音声認識　<button id="start-btn" class="btn btn-primary" data-bs-toggle="button" onClick="start();">開始</button> <button id="stop-btn" class="btn btn-primary" onClick="stop();">終了</button>';
 }
 //データベースからデータを削除
 function resetData(){
@@ -116,6 +136,7 @@ function cautionStart(){
 	database.ref(room+'/'+"caution").set({
 	    user: cautionUser,
 	    colorUser: cautionColorUser,
+	    audioUser: cautionAudioUser,
 	    volume: cautionVolume,
 	});
     }
@@ -126,7 +147,7 @@ function cautionColorStart(){
     if(cautionName!=null){
 	for(let i=1; i<=n; i++){
 	    if(cautionName.value == i){
-		document.getElementById("cautionBtnResult"+i).innerHTML = setLabel(cautionName.value-1)+"さんにカラーで注意喚起しています！";
+		document.getElementById("cautionBtnResult_color"+i).innerHTML = setLabel(cautionName.value-1)+"さんにカラーで注意喚起しています！";
 		cautionColorUser[i-1] = true;
 		alpha[i] = 1;
 		alphaBack[i] = 0;
@@ -140,6 +161,30 @@ function cautionColorStart(){
 	database.ref(room+'/'+"caution").set({
 	    user: cautionUser,
 	    colorUser: cautionColorUser,
+	    audioUser: cautionAudioUser,
+	    volume: cautionVolume,
+	});
+    }
+}
+let count=0;
+function cautionAudioStart(){
+    if(cautionName!=null){
+	for(let i=1; i<=n; i++){
+	    if(cautionName.value == i){
+		document.getElementById("cautionBtnResult_audio"+i).innerHTML = setLabel(cautionName.value-1)+"さんに音声で注意喚起しました！";
+		count=0;
+		cautionAudioUser = i;
+		if(data2[cautionName.value-1].y>Math.floor(100/n)){
+		    cautionVolume[i-1] = "over";
+		} else {
+		    cautionVolume[i-1] = "under";
+		}
+	    }
+	}
+	database.ref(room+'/'+"caution").set({
+	    user: cautionUser,
+	    colorUser: cautionColorUser,
+	    audioUser: cautionAudioUser,
 	    volume: cautionVolume,
 	});
     }
@@ -149,15 +194,19 @@ function cautionStop(){
 	for(let i=1; i<=n; i++){
 	    if(cautionStopName.value == i){
 		document.getElementById("cautionBtnResult"+i).innerHTML = '';
+		document.getElementById("cautionBtnResult_color"+i).innerHTML = '';
+		document.getElementById("cautionBtnResult_audio"+i).innerHTML = '';
 		alpha[i] = 1;
 		alphaBack[i] = 0;
 		cautionUser[i-1] = false;
 		cautionColorUser[i-1] = false;
+		if(i==cautionAudioUser) cautionAudioUser = 0;
 	    }
 	}
 	database.ref(room+'/'+"caution").set({
 	    user: cautionUser,
 	    colorUser: cautionColorUser,
+	    audioUser: cautionAudioUser,
 	    volume: cautionVolume,
 	});
     }
@@ -175,7 +224,7 @@ function setSpeechVolume(finalTranscript){
 //音声認識部分のHTML表示
 function writeSpeechVolume(finalTranscript,interimTranscript){
     resultDiv.innerHTML = finalTranscript + '<i style="color:#ddd;">' + interimTranscript + '</i>';
-    resultDiv2.innerHTML = finalTranscript.length; // 文字数
+    resultDiv2.value = finalTranscript.length; // 文字数
 }
 
 //chart表示
@@ -191,10 +240,6 @@ var chart = new Chart(ctx, {
     },
     options: {
 	plugins: {
-	    title: {
-		display: true,
-		text: '発言量',
-	    },
 	},
 	scales: {
 	    xAxes: {
@@ -243,10 +288,6 @@ var chart2 = new Chart(ctx2, {
     },
     options: {
 	plugins: {
-	    title: {
-		display: true,
-		text: '占有率',
-	    },
 	},
 	scales: {
 	    xAxes: {
@@ -454,24 +495,39 @@ function writeCautionName(){
     if(cautionStopName != null) cautionStopName.innerHTML = names;
 }
 function writeSetting(){
-    if(isLookAllSpeechVolume){
-	setting.innerHTML = "・全員の発言量が見える<br>";
-    } else if(isLookMySpeechVolume){
-	setting.innerHTML = "・自分の発言量だけが見える<br>";
+    if(isLookSpeechVolume == "all"){
+	setting.innerHTML = "発言量の表示　 ： 全員　　<br>";
+    } else if(isLookSpeechVolume == "one"){
+	setting.innerHTML = "発言量の表示　 ： 個人　　<br>";
     } else {
-	setting.innerHTML = "・発言量は見えない<br>"
+	setting.innerHTML = "発言量の表示　 ： なし　　<br>"
     }
     if(isAutoCaution){
-	setting.innerHTML += "・注意喚起は自動で行われる<br>";
+	setting.innerHTML += "注意喚起　　　 ： 自動　　<br>";
     } else {
-	setting.innerHTML += "・注意喚起は手動で行われる<br>";
+	setting.innerHTML += "注意喚起　　　 ： 手動　　<br>";
     }
     if(isCautionAll){
-	setting.innerHTML += "・注意喚起は全員に伝えられる<br>";
+	setting.innerHTML += "注意喚起の表示 ： 全員　　<br>";
     } else {
-	setting.innerHTML += "・注意喚起は個人にのみ伝えられる<br>";
+	setting.innerHTML += "注意喚起の表示 ： 個人　　<br>";
+    }
+    if(isAutoCaution){
+	if(isText){
+	    setting.innerHTML += "注意喚起の方法 ： テキスト<br>";
+	} else if(isColor){
+	    setting.innerHTML += "注意喚起の方法 ： カラー　<br>";
+	} else if(isAudio){
+	    setting.innerHTML += "注意喚起の方法 ： 音声　　<br>";
+	}
     }
 }
+let myAlpha = 1;
+let myAlphaBack = 0;
+let audio1 = new Audio("./sounds/sound01.mp3");
+let audio2 = new Audio("./sounds/sound02.mp3");
+let count1 = 0;
+let count2 = 0;
 function writeCaution(){
     let allVolume = 0;
     for(let i=0; i<n; i++){
@@ -480,29 +536,79 @@ function writeCaution(){
 	}
     }
     if(isAutoCaution){
+	cautionResult.innerHTML = "";
 	if(allVolume>100){
-	    cautionResult.innerHTML = "";
-	    for(let i=0; i<n; i++){
-		if(data2[i].y >= cautionRange[0]){
-		    cautionStrAuto(i+1,'over');
+	    if(isText){
+		if(isCautionAll){
+		    for(let i=0; i<n; i++){
+			if(data2[i].y >= cautionRange[0]){
+			    cautionStrAuto(i+1,'over');
+			}
+			if(data2[i].y <= cautionRange[1]){
+			    cautionStrAuto(i+1,'under');
+			}
+		    }
+		} else {
+		    if(data2[user.value-1].y >= cautionRange[0]){
+			cautionStrAuto(user.value,'over');
+		    }
+		    if(data2[user.value-1].y <= cautionRange[1]){
+			cautionStrAuto(user.value,'under');
+		    }
 		}
-		if(data2[i].y <= cautionRange[1]){
-		    cautionStrAuto(i+1,'under');
+	    }
+	    if(isColor){
+		if(data2[user.value-1].y >= cautionRange[0]){
+		    allElements.style.color = "rgba(0,0,0,"+myAlpha+")";
+		    myAlpha -= 0.005;
+		} else {
+		    myAlpha = 1;
+		    allElements.style.color = "rgba(0,0,0,1)";
+		}
+		if(data2[user.value-1].y <= cautionRange[1]){
+		    allElements.style.backgroundColor = "rgba(0,0,0,"+myAlphaBack+")";
+		    myAlphaBack += 0.005;
+		} else {
+		    myAlphaBack = 0;
+		    allElements.style.backgroundColor = "rgba(0,0,0,0)"
+		}
+	    }
+	    if(isAudio){
+		if(data2[user.value-1].y >= cautionRange[0]){
+		    if(count1<=0){
+			audio2.play();
+			count1 = 0;
+		    }
+		    count1 += 1;
+		    if(count1>100) count1=0;
+		} else if(data2[user.value-1].y <= cautionRange[1]){
+		    if(count2<=0){
+			audio1.play();
+			count2=0;
+		    }
+		    count2 += 1;
+		    if(count2>100) count2=0;
+		} else {
+		    count1 = 0;
+		    count2 = 0;
 		}
 	    }
 	}
     } else {
-	
+	if(count<5) count += 1;
 	for(let i=1; i<=n; i++){
+	    if(count>4){
+		document.getElementById("cautionBtnResult_audio"+i).innerHTML = '';
+	    }
 	    if(cautionVolume[i-1] == "over"){
-		if(document.getElementById("cautionBtnResult"+i)!=null){
-		    document.getElementById("cautionBtnResult"+i).style.color = "rgba(255,0,0,"+alpha[i]+")";
+		if(document.getElementById("cautionBtnResult_color"+i)!=null){
+		    document.getElementById("cautionBtnResult_color"+i).style.color = "rgba(255,0,0,"+alpha[i]+")";
 		    if(alpha[i]<0.1) alpha[i] = 0.1;
 		    else alpha[i] -= 0.005;
 		}
 	    } else{
-		if(document.getElementById("cautionBtnResult"+i)!=null){
-		    document.getElementById("cautionBtnResult"+i).style.backgroundColor = "rgba(0,0,0,"+alphaBack[i]+")";
+		if(document.getElementById("cautionBtnResult_color"+i)!=null){
+		    document.getElementById("cautionBtnResult_color"+i).style.backgroundColor = "rgba(0,0,0,"+alphaBack[i]+")";
 		    alphaBack[i] += 0.005;
 		}
 	    }

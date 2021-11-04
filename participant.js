@@ -2,9 +2,9 @@ var database = firebase.database();
 let room = "speech_room";
 const allElements = document.getElementById("allElements");
 const setting = document.getElementById("setting");
-const number = document.getElementById("number");
-const user = document.getElementById("user");
-const name = document.getElementById("name");
+//const number = document.getElementById("number");
+//const user = document.getElementById("user");
+//const name = document.getElementById("name");
 const reset = document.getElementById("reset");
 const cautionResult = document.getElementById("cautionResult");
 const collapseChart = document.getElementById("collapseChart");
@@ -16,6 +16,8 @@ const outputStr = document.getElementById("outputStr");
 //音声認識
 const startBtn = document.querySelector('#start-btn');
 const stopBtn = document.querySelector('#stop-btn');
+const btnArea = document.querySelector('#btn-area');
+const isRecognition = document.getElementById('isRecognition');
 const getBtn = document.querySelector('#get-btn');
 const resultDiv = document.querySelector('#result-div');
 const resultDiv2 = document.querySelector('#result-div2');
@@ -31,27 +33,29 @@ let finalTranscript = ''; // 確定した(黒の)認識結果
 
 //HTML表示
 let n;
+let user;
+let name;
 firebase.database().ref(room).child("number").on("value",snapshot => {
     n = snapshot.val().number;
-    number.value = n;
+    //number.value = n;
 });
-let isLookMySpeechVolume;
-let isLookAllSpeechVolume;
+let isLookSpeechVolume;
 let isAutoCaution;
 let isCautionAll;
 let isText;
 let isColor;
+let isAudio;
 let cautionRange;
 firebase.database().ref(room).child("setting").on("value",snapshot => {
     let v = snapshot.val();
-    isLookMySpeechVolume = v.isLookMySpeechVolume;
-    isLookAllSpeechVolume = v.isLookAllSpeechVolume;
+    isLookSpeechVolume = v.isLookSpeechVolume;
     isAutoCaution = v.isAutoCaution;
     isCautionAll = v.isCautionAll;
     isText = v.isText;
     isColor = v.isColor;
+    isAudio = v.isAudio;
     cautionRange = v.cautionRange;
-    writeSetting();
+    //writeSetting();
     writeHTML();
     setChart();
     setChart2();
@@ -74,29 +78,43 @@ recognition.onresult = (event) => {
 	    interimTranscript = transcript;
 	}
     }
+    isRecognition.innerHTML = "音声を認識中...";
     setSpeechVolume(finalTranscript);
     getLatestData();
     writeSpeechVolume(finalTranscript,interimTranscript);
 }
+recognition.onsoundstart = function(){
+    isRecognition.innerHTML = "音声を認識中...";
+}
+recognition.onnomatch = function(){
+    isRecognition.innerHTML = "もう一度試してください";
+};
+recognition.onerror= function(){
+    isRecognition.innerHTML = "エラー";
+};
+recognition.onsoundend = function(){
+    isRecognition.innerHTML = "停止中";
+};
 
 function start(){
     recognition.start();
 }
 function stop(){
     recognition.stop();
+    btnArea.innerHTML = '音声認識　<button id="start-btn" class="btn btn-primary" data-bs-toggle="button" onClick="start();">開始</button> <button id="stop-btn" class="btn btn-primary" onClick="stop();">終了</button>';
 }
 
 //データベースからデータを削除
 function resetData(){
-    database.ref(room+'/'+"user"+user.value).set(null);
+    database.ref(room+'/'+"user"+user).set(null);
     finalTranscript = '';
     writeSpeechVolume(finalTranscript,'');
     getLatestData();
 }
 //データベースに新しいデータをセット
 function setSpeechVolume(finalTranscript){
-    database.ref(room+'/'+"user"+user.value).set({
-	name: setLabel(user.value-1),
+    database.ref(room+'/'+"user"+user).set({
+	name: setLabel(user-1),
 	speechVolume: finalTranscript.length,
 	script: finalTranscript,
 	facilitator: false,
@@ -105,7 +123,7 @@ function setSpeechVolume(finalTranscript){
 //音声認識部分のHTML表示
 function writeSpeechVolume(finalTranscript,interimTranscript){
     resultDiv.innerHTML = finalTranscript + '<i style="color:#ddd;">' + interimTranscript + '</i>';
-    resultDiv2.innerHTML = finalTranscript.length; // 文字数
+    resultDiv2.value = finalTranscript.length; // 文字数
 }
 
 //chart表示
@@ -123,10 +141,6 @@ chart = new Chart(ctx, {
     },
     options: {
 	plugins: {
-	    title: {
-		display: true,
-		text: '発言量',
-	    },
 	},
 	scales: {
 	    xAxes: {
@@ -144,7 +158,7 @@ chart = new Chart(ctx, {
 		    onRefresh: chart => {
 			getLatestData();
 			writeCaution();
-			if(isLookAllSpeechVolume){
+			if(isLookSpeechVolume == "all"){
 			    writeAllStr();
 			    for(let i=0; i<n; i++) {
 				if(chart.data.datasets[i] == undefined){
@@ -160,13 +174,13 @@ chart = new Chart(ctx, {
 			    for(let i=chart.data.datasets.length-1; i>=n; i--) {
 				chart.data.datasets.splice(i,1);
 			    }
-			} else if(isLookMySpeechVolume){
+			} else if(isLookSpeechVolume == "one"){
 			    writeMyStr();
 			    if(chart.data.datasets[0] == undefined){
-				writeDatasets(user.value-1,0);
+				writeDatasets(user-1,0);
 			    } else {
-				chart.data.datasets[0].data.push(data[user.value-1]);
-				chart.data.datasets[0].label = setLabel(user.value-1);
+				chart.data.datasets[0].data.push(data[user-1]);
+				chart.data.datasets[0].label = setLabel(user-1);
 				updateYAxes();
 			    }
 			}	
@@ -189,10 +203,6 @@ chart2 = new Chart(ctx2, {
     },
     options: {
 	plugins: {
-	    title: {
-		display: true,
-		text: '占有率',
-	    },
 	},
 	scales: {
 	    xAxes: {
@@ -210,7 +220,7 @@ chart2 = new Chart(ctx2, {
 		    onRefresh: chart => {
 			getLatestData();
 			writeCaution();
-			if(isLookAllSpeechVolume){
+			if(isLookSpeechVolume == "all"){
 			    writeAllStr();
 			    for(let i=0; i<n; i++) {
 				if(chart2.data.datasets[i] == undefined){
@@ -225,13 +235,13 @@ chart2 = new Chart(ctx2, {
 			    for(let i=chart2.data.datasets.length-1; i>=n; i--) {
 				chart2.data.datasets.splice(i,1);
 			    }
-			} else if(isLookMySpeechVolume){
+			} else if(isLookSpeechVolume == "one"){
 			    writeMyStr();
 			    if(chart2.data.datasets[0] == undefined){
-				writeDatasets(user.value-1,0);
+				writeDatasets(user-1,0);
 			    } else {
-				chart2.data.datasets[0].data.push(data2[user.value-1]);
-				chart2.data.datasets[0].label = setLabel(user.value-1);
+				chart2.data.datasets[0].data.push(data2[user-1]);
+				chart2.data.datasets[0].label = setLabel(user-1);
 				updateYAxes();
 			    }
 			}
@@ -352,10 +362,10 @@ function updateYAxes(){
 function writeHTML() {
     s = '';
     t = '';
-    if(isLookAllSpeechVolume){
+    if(isLookSpeechVolume == "all"){
 	writeAllTabHTML();
 	writeCollapseShowAll();
-    } else if(isLookMySpeechVolume){
+    } else if(isLookSpeechVolume == "one"){
 	writeMyTabHTML();
 	writeCollapseShowAll();
     } else {
@@ -383,7 +393,7 @@ function writeAllTabHTML(){
     }
 }
 function writeMyTabHTML(){
-    let i = user.value-1;
+    let i = user-1;
     s += '<li class="nav-item">';
     s += '<a href="#output0" class="nav-link active" data-bs-toggle="tab" id="label0">'+setLabel(i)+'</a>';
     s += '</li>';
@@ -393,14 +403,9 @@ function writeMyTabHTML(){
     t += '</div>';
 }
 function writeCollapseShowAll(){
-    collapseChart.innerHTML = '<p>表示 / 非表示　<a class="btn btn-primary" data-bs-toggle="collapse" href="#multiCollapseExample1" role="button" aria-expanded="false" aria-controls="multiCollapseExample1">発言量</a><button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#multiCollapseExample2" aria-expanded="false" aria-controls="multiCollapseExample2">占有率</button>　<button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target=".multi-collapse" aria-expanded="false" aria-controls="multiCollapseExample1 multiCollapseExample2">一括</button></p>';
+    collapseChart.innerHTML = '<div class="row"><div class="d-grid col-6 mx-auto"><a class="btn btn-outline-outline-right btn-sm" data-bs-toggle="collapse" href="#multiCollapseExample1" role="button" aria-expanded="false" aria-controls="multiCollapseExample1">発言量</a></div><div class="d-grid col-6 mx-auto"><button class="btn btn-outline-outline-right btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#multiCollapseExample2" aria-expanded="false" aria-controls="multiCollapseExample2">占有率</button></div></div>';
     multiCollapse1.innerHTML = '<div class="show multi-collapse" id="multiCollapseExample1"><div class="card card-body"><canvas id="myChart"></canvas></div></div>';
     multiCollapse2.innerHTML = '<div class="show multi-collapse" id="multiCollapseExample2"><div class="card card-body"><canvas id="myChart2"></canvas></div></div>';
-}
-function writeCollapseShow(){
-    collapseChart.innerHTML = '<p>表示 / 非表示　<a class="btn btn-primary" data-bs-toggle="collapse" href="#multiCollapseExample1" role="button" aria-expanded="false" aria-controls="multiCollapseExample1">発言量</a></p>';
-    multiCollapse1.innerHTML = '<div class="show collapse" id="multiCollapseExample1"><div class="card card-body"><canvas id="myChart"></canvas></div></div>';
-    multiCollapse2.innerHTML = '<div class="collapse collapse" id="multiCollapseExample2"><div class="card card-body"><canvas id="myChart2"></canvas></div></div>';
 }
 function writeCollapse(){
     multiCollapse1.innerHTML = '<div class="collapse multi-collapse" id="multiCollapseExample1"><div class="card card-body"><canvas id="myChart"></canvas></div></div>';
@@ -429,7 +434,7 @@ function writeAllStr() {
     }
 }
 function writeMyStr() {
-    let i = user.value-1;
+    let i = user-1;
     if(dataAll[i] === undefined){
 	str[i] = "loading..."
     } else {
@@ -445,27 +450,13 @@ function writeMyStr() {
     document.getElementById("label0").innerHTML = setLabel(i);
     document.getElementById("outputStr0").innerHTML = str[i];
 }
-function writeSetting(){
-    if(isLookAllSpeechVolume){
-	setting.innerHTML = "・全員の発言量が見える<br>";
-    } else if(isLookMySpeechVolume){
-	setting.innerHTML = "・自分の発言量だけが見える<br>";
-    } else {
-	setting.innerHTML = "・発言量は見えない<br>"
-    }
-    if(isAutoCaution){
-	setting.innerHTML += "・注意喚起は自動で行われる<br>";
-    } else {
-	setting.innerHTML += "・注意喚起は手動で行われる<br>";
-    }
-    if(isCautionAll){
-	setting.innerHTML += "・注意喚起は全員に伝えられる<br>";
-    } else {
-	setting.innerHTML += "・注意喚起は個人にのみ伝えられる<br>";
-    }
-}
+
 let alpha = 1;
 let alphaBack = 0;
+let audio1 = new Audio("./sounds/sound01.mp3");
+let audio2 = new Audio("./sounds/sound02.mp3");
+let count1 = 0;
+let count2 = 0;
 function writeCaution(){
     cautionResult.innerHTML = "";
     let allVolume = 0;
@@ -487,23 +478,23 @@ function writeCaution(){
 			}
 		    }
 		} else {
-		    if(data2[user.value-1].y >= cautionRange[0]){
-			cautionStrAuto(user.value,'over');
+		    if(data2[user-1].y >= cautionRange[0]){
+			cautionStrAuto(user,'over');
 		    }
-		    if(data2[user.value-1].y <= cautionRange[1]){
-			cautionStrAuto(user.value,'under');
+		    if(data2[user-1].y <= cautionRange[1]){
+			cautionStrAuto(user,'under');
 		    }
 		}
 	    }
 	    if(isColor){
-		if(data2[user.value-1].y >= cautionRange[0]){
+		if(data2[user-1].y >= cautionRange[0]){
 		    allElements.style.color = "rgba(0,0,0,"+alpha+")";
 		    alpha -= 0.005;
 		} else {
 		    alpha = 1;
 		    allElements.style.color = "rgba(0,0,0,1)";
 		}
-		if(data2[user.value-1].y <= cautionRange[1]){
+		if(data2[user-1].y <= cautionRange[1]){
 		    allElements.style.backgroundColor = "rgba(0,0,0,"+alphaBack+")";
 		    alphaBack += 0.005;
 		} else {
@@ -511,39 +502,63 @@ function writeCaution(){
 		    allElements.style.backgroundColor = "rgba(0,0,0,0)"
 		}
 	    }
+	    if(isAudio){
+		if(data2[user-1].y >= cautionRange[0]){
+		    if(count1<=0){
+			audio2.play();
+			count1 = 0;
+		    }
+		    count1 += 1;
+		    if(count1>100) count1=0;
+		} else if(data2[user-1].y <= cautionRange[1]){
+		    if(count2<=0){
+			audio1.play();
+			count2=0;
+		    }
+		    count2 += 1;
+		    if(count2>100) count2=0;
+		} else {
+		    count1 = 0;
+		    count2 = 0;
+		}
+	    }
 	}
     } else {
-	let cUser;
-	let cColorUser;
-	let cVolume
+	let cUser = [];
+	let cColorUser = [];
+	let cAudioUser = 0;
+	let cVolume = [];
 	database.ref(room).child("caution").on("value",snapshot => {
 	    cUser = snapshot.val().user;
 	    cColorUser = snapshot.val().colorUser;
+	    cAudioUser = snapshot.val().audioUser;
 	    cVolume = snapshot.val().volume;
 	});
 	if(cUser!=null){
 	    for(let i=0; i<n; i++){
 		if(cUser[i]){
 		    if(isCautionAll){
-			if(user.value != 0){
+			if(user != 0){
 			    cautionStr(i+1,cVolume[i]);
 			}
 		    } else {
-			if(user.value == i+1){
-			    cautionStr(user.value,cVolume[i]);
+			if(user == i+1){
+			    cautionStr(user,cVolume[i]);
 			}	
 		    }
 		}
 	    }
+	} else {
+	    cUser = [];
 	}
 	if(cColorUser!=null){
 	    for(let i=0; i<n; i++){
 		if(cColorUser[i]){
 		    if(isCautionAll){
-			if(user.value != 0){
+			if(user != 0){
 			}
 		    } else {
-			if(user.value == i+1){
+			if(user == i+1){
 			    if(cVolume[i]=="over"){
 				allElements.style.color = "rgba(0,0,0,"+alpha+")";
 				alpha -= 0.005;
@@ -554,7 +569,7 @@ function writeCaution(){
 			}
 		    }
 		} else {
-		    if(user.value == i+1){
+		    if(user == i+1){
 			alpha = 1;
 			alphaBack = 0;
 			allElements.style.color = "rgba(0,0,0,1)";
@@ -562,7 +577,25 @@ function writeCaution(){
 		    }
 		}
 	    }
+	} else {
+	    cColorUser = [];
 	}
+	if(cAudioUser!=null){
+	    if(cAudioUser == user){
+		if(cVolume[user-1]=="over"){
+		    audio2.play();
+		} else {
+		    audio1.play();
+		}
+	    }
+	}
+	if(cVolume==null) cVolume=[];
+	database.ref(room+"/caution").set({
+	    user: cUser,
+	    colorUser: cColorUser,
+	    audioUser: 0,
+	    volume: cVolume,
+	});
     }
 }
 function cautionStrAuto(cUser,cVolume){
@@ -602,11 +635,7 @@ function getUrlVars() {
 window.onload = function() {
     para = getUrlVars();
     userID = para["user"];
-    if (user !== undefined) {
-        user.value = userID;
-    }
+    user = userID;
     nameID = para["name"];
-    if (name !== undefined) {
-        name.value = nameID;
-    }
+    name = nameID;
 }
