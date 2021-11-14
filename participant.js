@@ -552,30 +552,19 @@ function writeCaution(){
 	    cUser = [];
 	}
 	if(cColorUser!=null){
-	    for(let i=0; i<n; i++){
-		if(cColorUser[i]){
-		    if(isCautionAll){
-			if(user != 0){
-			}
-		    } else {
-			if(user == i+1){
-			    if(cVolume[i]=="over"){
-				allElements.style.color = "rgba(0,0,0,"+alpha+")";
-				alpha -= 0.005;
-			    } else {
-				allElements.style.backgroundColor = "rgba(0,0,0,"+alphaBack+")";
-				alphaBack += 0.005;
-			    }
-			}
-		    }
+	    if(cColorUser[user-1]){
+		if(cVolume[user-1]=="over"){
+		    allElements.style.color = "rgba(0,0,0,"+alpha+")";
+		    alpha -= 0.005;
 		} else {
-		    if(user == i+1){
-			alpha = 1;
-			alphaBack = 0;
-			allElements.style.color = "rgba(0,0,0,1)";
-			allElements.style.backgroundColor = "rgba(0,0,0,0)";
-		    }
+		    allElements.style.backgroundColor = "rgba(0,0,0,"+alphaBack+")";
+		    alphaBack += 0.005;
 		}
+	    } else {
+		alpha = 1;
+		alphaBack = 0;
+		allElements.style.color = "rgba(0,0,0,1)";
+		allElements.style.backgroundColor = "rgba(0,0,0,0)";
 	    }
 	} else {
 	    cColorUser = [];
