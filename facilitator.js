@@ -35,10 +35,25 @@ let finalTranscript = ''; // 確定した(黒の)認識結果
 
 //HTML表示
 let n;
-firebase.database().ref(room).child("number").on("value",snapshot => {
+let cautionUser = [];
+let cautionColorUser = [];
+let cautionAudioUser = 0;
+let cautionVolume = [];
+firebase.database().ref(room).child("number").once("value",snapshot => {
     n = snapshot.val().number;
     getLatestData();
     writeHTML();
+    for(let i=0; i<n; i++){
+	cautionUser.push(false);
+	cautionColorUser.push(false);
+	cautionVolume.push(false);
+    }
+    database.ref(room+'/'+"caution").set({
+	user: cautionUser,
+	colorUser: cautionColorUser,
+	audioUser: cautionAudioUser,
+	volume: cautionVolume,
+    });
 });
 let isLookSpeechVolume;
 let isAutoCaution;
@@ -47,7 +62,7 @@ let isText;
 let isColor;
 let isAudio;
 let cautionRange;
-firebase.database().ref(room).child("setting").on("value",snapshot => {
+firebase.database().ref(room).child("setting").once("value",snapshot => {
     let v = snapshot.val();
     isLookSpeechVolume = v.isLookSpeechVolume;
     isAutoCaution = v.isAutoCaution;
@@ -65,10 +80,6 @@ firebase.database().ref(room).child("setting").on("value",snapshot => {
 	cautionStopName = document.getElementById("cautionStopName");
     } 
 });
-let cautionUser = [];
-let cautionColorUser = [];
-let cautionAudioUser = 0;
-let cautionVolume = [];
 
 let s = '';
 let t = '';
@@ -122,94 +133,77 @@ function resetData(){
 }
 function cautionStart(){
     if(cautionName!=null){
-	for(let i=1; i<=n; i++){
-	    if(cautionName.value == i){
-		document.getElementById("cautionBtnResult"+i).innerHTML = setLabel(cautionName.value-1)+"さんにテキストで注意喚起しています！";
-		cautionUser[i-1] = true;
-		if(data2[cautionName.value-1].y>=Math.floor(100/n)){
-		    cautionVolume[i-1] = "over";
-		} else {
-		    cautionVolume[i-1] = "under";
-		}
-	    }
+	let i = cautionName.value;
+	document.getElementById("cautionBtnResult"+i).innerHTML = setLabel(cautionName.value-1)+"さんにテキストで注意喚起しています！";
+	cautionUser[i-1] = true;
+	if(data2[cautionName.value-1].y>=Math.floor(100/n)){
+	    cautionVolume[i-1] = "over";
+	} else {
+	    cautionVolume[i-1] = "under";
 	}
-	database.ref(room+'/'+"caution").set({
-	    user: cautionUser,
-	    colorUser: cautionColorUser,
-	    audioUser: cautionAudioUser,
-	    volume: cautionVolume,
-	});
     }
+    console.log(cautionUser);
+    database.ref(room+'/'+"caution").update({
+	user: cautionUser,
+	volume: cautionVolume,
+    });
 }
 let alpha = [];
 let alphaBack = [];
 function cautionColorStart(){
     if(cautionName!=null){
-	for(let i=1; i<=n; i++){
-	    if(cautionName.value == i){
-		document.getElementById("cautionBtnResult_color"+i).innerHTML = setLabel(cautionName.value-1)+"さんにカラーで注意喚起しています！";
-		cautionColorUser[i-1] = true;
-		alpha[i] = 1;
-		alphaBack[i] = 0;
-		if(data2[cautionName.value-1].y>=Math.floor(100/n)){
-		    cautionVolume[i-1] = "over";
-		} else {
-		    cautionVolume[i-1] = "under";
-		}
-	    }
+	let i = cautionName.value;
+	document.getElementById("cautionBtnResult_color"+i).innerHTML = setLabel(cautionName.value-1)+"さんにカラーで注意喚起しています！";
+	cautionColorUser[i-1] = true;
+	alpha[i] = 1;
+	alphaBack[i] = 0;
+	if(data2[cautionName.value-1].y>=Math.floor(100/n)){
+	    cautionVolume[i-1] = "over";
+	} else {
+	    cautionVolume[i-1] = "under";
 	}
-	database.ref(room+'/'+"caution").set({
-	    user: cautionUser,
-	    colorUser: cautionColorUser,
-	    audioUser: cautionAudioUser,
-	    volume: cautionVolume,
-	});
     }
+    database.ref(room+'/'+"caution").update({
+	colorUser: cautionColorUser,
+	volume: cautionVolume,
+    });
 }
 let count=0;
 function cautionAudioStart(){
     if(cautionName!=null){
-	for(let i=1; i<=n; i++){
-	    if(cautionName.value == i){
-		document.getElementById("cautionBtnResult_audio"+i).innerHTML = setLabel(cautionName.value-1)+"さんに音声で注意喚起しました！";
-		count=0;
-		cautionAudioUser = i;
-		if(data2[cautionName.value-1].y>Math.floor(100/n)){
-		    cautionVolume[i-1] = "over";
-		} else {
-		    cautionVolume[i-1] = "under";
-		}
-	    }
+	let i = cautionName.value;
+	document.getElementById("cautionBtnResult_audio"+i).innerHTML = setLabel(cautionName.value-1)+"さんに音声で注意喚起しました！";
+	count=0;
+	cautionAudioUser = i;
+	if(data2[cautionName.value-1].y>Math.floor(100/n)){
+	    cautionVolume[i-1] = "over";
+	} else {
+	    cautionVolume[i-1] = "under";
 	}
-	database.ref(room+'/'+"caution").set({
-	    user: cautionUser,
-	    colorUser: cautionColorUser,
-	    audioUser: cautionAudioUser,
-	    volume: cautionVolume,
-	});
     }
+    database.ref(room+'/'+"caution").update({
+	audioUser: cautionAudioUser,
+	volume: cautionVolume,
+    });
 }
 function cautionStop(){
     if(cautionStopName!=null){
-	for(let i=1; i<=n; i++){
-	    if(cautionStopName.value == i){
-		document.getElementById("cautionBtnResult"+i).innerHTML = '';
-		document.getElementById("cautionBtnResult_color"+i).innerHTML = '';
-		document.getElementById("cautionBtnResult_audio"+i).innerHTML = '';
-		alpha[i] = 1;
-		alphaBack[i] = 0;
-		cautionUser[i-1] = false;
-		cautionColorUser[i-1] = false;
-		if(i==cautionAudioUser) cautionAudioUser = 0;
-	    }
-	}
-	database.ref(room+'/'+"caution").set({
-	    user: cautionUser,
-	    colorUser: cautionColorUser,
-	    audioUser: cautionAudioUser,
-	    volume: cautionVolume,
-	});
+	let i = cautionStopName.value;
+	document.getElementById("cautionBtnResult"+i).innerHTML = '';
+	document.getElementById("cautionBtnResult_color"+i).innerHTML = '';
+	document.getElementById("cautionBtnResult_audio"+i).innerHTML = '';
+	alpha[i] = 1;
+	alphaBack[i] = 0;
+	cautionUser[i-1] = false;
+	cautionColorUser[i-1] = false;
+	if(i==cautionAudioUser) cautionAudioUser = 0;
     }
+    database.ref(room+'/'+"caution").set({
+	user: cautionUser,
+	colorUser: cautionColorUser,
+	audioUser: cautionAudioUser,
+	volume: cautionVolume,
+    });
 }
 
 //データベースに新しいデータをセット

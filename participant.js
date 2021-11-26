@@ -35,9 +35,17 @@ let finalTranscript = ''; // 確定した(黒の)認識結果
 let n;
 let user;
 let name;
+let cUser = [];
+let cColorUser = [];
+let cAudioUser = 0;
+let cVolume = [];
 firebase.database().ref(room).child("number").on("value",snapshot => {
     n = snapshot.val().number;
-    //number.value = n;
+    for(let i=0; i<n; i++){
+	cUser.push(false);
+	cColorUser.push(false);
+	cVolume.push(false);
+    }
 });
 let isLookSpeechVolume;
 let isAutoCaution;
@@ -457,6 +465,15 @@ let audio1 = new Audio("./sounds/sound01.mp3");
 let audio2 = new Audio("./sounds/sound02.mp3");
 let count1 = 0;
 let count2 = 0;
+database.ref(room).child("caution").on("child_changed",snapshot => {
+    database.ref(room).child("caution").on("value",snapshot => {
+	cUser = snapshot.val().user;
+	cColorUser = snapshot.val().colorUser;
+	cAudioUser = snapshot.val().audioUser;
+	cVolume = snapshot.val().volume;
+	console.log(snapshot.val());
+    });
+});
 function writeCaution(){
     cautionResult.innerHTML = "";
     let allVolume = 0;
@@ -524,16 +541,6 @@ function writeCaution(){
 	    }
 	}
     } else {
-	let cUser = [];
-	let cColorUser = [];
-	let cAudioUser = 0;
-	let cVolume = [];
-	database.ref(room).child("caution").on("value",snapshot => {
-	    cUser = snapshot.val().user;
-	    cColorUser = snapshot.val().colorUser;
-	    cAudioUser = snapshot.val().audioUser;
-	    cVolume = snapshot.val().volume;
-	});
 	if(cUser!=null){
 	    for(let i=0; i<n; i++){
 		if(cUser[i]){
@@ -548,10 +555,6 @@ function writeCaution(){
 		    }
 		}
 	    }
-	} else {
-	    cUser = [];
-	}
-	if(cColorUser!=null){
 	    if(cColorUser[user-1]){
 		if(cVolume[user-1]=="over"){
 		    allElements.style.color = "rgba(0,0,0,"+alpha+")";
@@ -566,10 +569,6 @@ function writeCaution(){
 		allElements.style.color = "rgba(0,0,0,1)";
 		allElements.style.backgroundColor = "rgba(0,0,0,0)";
 	    }
-	} else {
-	    cColorUser = [];
-	}
-	if(cAudioUser!=null){
 	    if(cAudioUser == user){
 		if(cVolume[user-1]=="over"){
 		    audio2.play();
@@ -577,14 +576,13 @@ function writeCaution(){
 		    audio1.play();
 		}
 	    }
+	    database.ref(room+"/caution").set({
+		user: cUser,
+		colorUser: cColorUser,
+		audioUser: 0,
+		volume: cVolume,
+	    });
 	}
-	if(cVolume==null) cVolume=[];
-	database.ref(room+"/caution").set({
-	    user: cUser,
-	    colorUser: cColorUser,
-	    audioUser: 0,
-	    volume: cVolume,
-	});
     }
 }
 function cautionStrAuto(cUser,cVolume){
