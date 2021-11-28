@@ -79,7 +79,9 @@
 
       let n=1;
       let isLookSpeechVolume = "";
+      let isCaution = true;
       let isAutoCaution = false;
+      let isCautionManual = false;
       let isCautionAll = false;
       let isText = false;
       let isColor = false;
@@ -89,7 +91,8 @@
       let my_url;
       
       facilitatorY.onclick = () => {
-	  setting.innerHTML = '<h3>設定を入力</h3><p>人数 <input type="number" id="number" min="1" value="1"><br></p><p><strong>発言量データの表示</strong><br><input class="form-check-input" type="radio" name="visible" id="visibleNo"> <label class="form-check-label" for="flexRadioDefault1">表示させない</label>　<input class="form-check-input" type="radio" name="visible" id="visibleOne" checked> <label class="form-check-label" for="flexRadioDefault2">自分のデータのみ</label>　<input class="form-check-input" type="radio" name="visible" id="visibleAll"> <label class="form-check-label" for="flexRadioDefault3">全員分</label></p><p><input type="checkbox" id="cautionAuto"> 注意喚起を自動で行う　　　　　　　　　<br><input type="checkbox" id="cautionAll"> 注意喚起(テキスト)を全員に周知する 　　</p><div id="auto"></div>';
+	  setting.innerHTML = '<h3>設定を入力</h3><p>人数 <input type="number" id="number" min="1" value="1"><br></p><p><strong>発言量データの表示</strong><br><input class="form-check-input" type="radio" name="visible" id="visibleNo"> <label class="form-check-label" for="flexRadioDefault1">表示させない</label>　<input class="form-check-input" type="radio" name="visible" id="visibleOne" checked> <label class="form-check-label" for="flexRadioDefault2">自分のデータのみ</label>　<input class="form-check-input" type="radio" name="visible" id="visibleAll"> <label class="form-check-label" for="flexRadioDefault3">全員分</label></p>';
+	  setting.innerHTML += '<p><strong>注意喚起</strong><br><input class="form-check-input" type="radio" name="caution" id="cautionNo"> <label class="form-check-label" for="flexRadioDefault1">なし</label>　<input class="form-check-input" type="radio" name="caution" id="cautionAuto"> <label class="form-check-label" for="flexRadioDefault2">自動</label>　<input class="form-check-input" type="radio" name="caution" id="cautionManual" checked> <label class="form-check-label" for="flexRadioDefault3">手動</label></p><p><input type="checkbox" id="cautionAll"> 注意喚起(テキスト)を全員に周知する 　　</p><div id="auto"></div>';
 	  const number = document.getElementById("number");
 	  number.onchange = () => {
 	      n = number.value;
@@ -100,16 +103,19 @@
 	  const visibleNo = document.getElementById("visibleNo");
 	  const visibleOne = document.getElementById("visibleOne");
 	  const visibleAll = document.getElementById("visibleAll");
+	  const cautionNo = document.getElementById("cautionNo");
 	  const cautionAuto = document.getElementById("cautionAuto");
+	  const cautionManual = document.getElementById("cautionManual");
 	  const cautionAll = document.getElementById("cautionAll");
 	  const auto = document.getElementById("auto");
 	  cautionAuto.onclick = () => {
-	      if(cautionAuto.checked){
-		  writeOutput(n)
-	      } else {
-		  cautionRange = [];
-		  auto.innerHTML = '';
-	      }
+	      writeOutput(n)
+	  }
+	  cautionNo.onclick = () => {
+	      auto.innerHTML = '';
+	  }
+	  cautionManual.onclick = () => {
+	      auto.innerHTML = '';
 	  }
 	  if(cautionAuto.checked){
 	      writeOutput(n)
@@ -146,7 +152,9 @@
 		  if(visibleNo.checked) isLookSpeechVolume = "no";
 		  if(visibleOne.checked) isLookSpeechVolume = "one";
 		  if(visibleAll.checked) isLookSpeechVolume = "all";
+		  if(cautionNo.checked) isCaution = false;
 		  if(cautionAuto.checked) isAutoCaution = true;
+		  if(cautionManual.checked) isCautionManual = true;
 		  if(cautionAll.checked) isCautionAll = true;
 		  if(cautionAuto.checked){
 		      const text = document.getElementById("text");
@@ -179,9 +187,9 @@
 		      speechVolume: 0,
 		      script: '',
 		  });
-		  
+		  if(cautionNo.checked) my_url = urlbase2 + "?user=" + user.value + "&name=" + name.value;
 		  if(cautionAuto.checked) my_url = urlbase2 + "?user=" + user.value + "&name=" + name.value;
-		  else my_url = urlbase1 + "?user=" + user.value + "&name=" + name.value + "&number=" + number.value;
+		  if(cautionManual.checked) my_url = urlbase1 + "?user=" + user.value + "&name=" + name.value + "&number=" + number.value;
 		  nextLink.innerHTML = '<br><a class="btn btn-primary" href='+my_url+' role="button">　 次へ 　</a>';
 	      }
 	      
