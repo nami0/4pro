@@ -471,7 +471,6 @@ database.ref(room).child("caution").on("child_changed",snapshot => {
 	cColorUser = snapshot.val().colorUser;
 	cAudioUser = snapshot.val().audioUser;
 	cVolume = snapshot.val().volume;
-	console.log(snapshot.val());
     });
 });
 function writeCaution(){
