@@ -249,7 +249,6 @@ function setSpeechVolume(finalTranscript){
 	name: setLabel(user.value-1),
 	speechVolume: finalTranscript.length,
 	script: finalTranscript,
-	facilitator: true,
     });
 }
 //音声認識部分のHTML表示
