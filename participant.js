@@ -22,15 +22,6 @@ const getBtn = document.querySelector('#get-btn');
 const resultDiv = document.querySelector('#result-div');
 const resultDiv2 = document.querySelector('#result-div2');
 
-SpeechRecognition = webkitSpeechRecognition || SpeechRecognition;
-let recognition = new SpeechRecognition();
-
-recognition.lang = 'ja-JP';
-recognition.interimResults = true;
-recognition.continuous = true;
-
-let finalTranscript = ''; // 確定した(黒の)認識結果
-
 //HTML表示
 let n;
 let user;
@@ -76,39 +67,65 @@ let str = [];
 let dataAll = [];
 let sumSpeechVolume = 0;
 
-recognition.onresult = (event) => {
-    let interimTranscript = ''; // 暫定(灰色)の認識結果
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-	let transcript = event.results[i][0].transcript;
-	if (event.results[i].isFinal) {
-	    finalTranscript += transcript;
-	} else {
-	    interimTranscript = transcript;
+let flag_speech = 0;
+let flag_speech_stop = 0;
+let finalTranscript = ''; // 確定した(黒の)認識結果
+
+function vr_function() {
+    if(flag_speech_stop == 1){
+    } else {
+	SpeechRecognition = webkitSpeechRecognition || SpeechRecognition;
+	let recognition = new SpeechRecognition();
+
+	recognition.lang = 'ja-JP';
+	recognition.interimResults = true;
+	recognition.continuous = true;
+
+	recognition.onresult = (event) => {
+	    let interimTranscript = ''; // 暫定(灰色)の認識結果
+	    for (let i = event.resultIndex; i < event.results.length; i++) {
+		let transcript = event.results[i][0].transcript;
+		if (event.results[i].isFinal) {
+		    finalTranscript += transcript;
+		    vr_function();
+		} else {
+		    interimTranscript = transcript;
+		    flag_speech = 1;
+		}
+	    }
+	    isRecognition.innerHTML = "音声を認識中...";
+	    setSpeechVolume(finalTranscript);
+	    getLatestData();
+	    writeSpeechVolume(finalTranscript,interimTranscript);
+	    if(flag_speech_stop == 1){
+		recognition.stop();
+	    }
 	}
+	recognition.onsoundstart = function(){
+	    isRecognition.innerHTML = "音声を認識中...";
+	}
+	recognition.onnomatch = function(){
+	    isRecognition.innerHTML = "もう一度試してください";
+	};
+	recognition.onerror= function(){
+	    isRecognition.innerHTML = "エラー";
+	    if(flag_speech == 0) vr_function();
+	};
+	recognition.onsoundend = function(){
+	    isRecognition.innerHTML = "停止中";
+	    vr_function();
+	};
+	flag_speech = 0;
+	recognition.start();
     }
-    isRecognition.innerHTML = "音声を認識中...";
-    setSpeechVolume(finalTranscript);
-    getLatestData();
-    writeSpeechVolume(finalTranscript,interimTranscript);
 }
-recognition.onsoundstart = function(){
-    isRecognition.innerHTML = "音声を認識中...";
-}
-recognition.onnomatch = function(){
-    isRecognition.innerHTML = "もう一度試してください";
-};
-recognition.onerror= function(){
-    isRecognition.innerHTML = "エラー";
-};
-recognition.onsoundend = function(){
-    isRecognition.innerHTML = "停止中";
-};
 
 function start(){
-    recognition.start();
+    flag_speech_stop = 0;
+    vr_function();
 }
 function stop(){
-    recognition.stop();
+    flag_speech_stop = 1;
     btnArea.innerHTML = '音声認識　<button id="start-btn" class="btn btn-primary" data-bs-toggle="button" onClick="start();">開始</button> <button id="stop-btn" class="btn btn-primary" onClick="stop();">終了</button>';
 }
 
@@ -141,128 +158,128 @@ let rgb=[];
 var chart;
 var chart2;
 function setChart(){
-var ctx = document.getElementById('myChart').getContext('2d');
-chart = new Chart(ctx, {
-    type: 'line',
-    data: {
-	datasets: []
-    },
-    options: {
-	plugins: {
+    var ctx = document.getElementById('myChart').getContext('2d');
+    chart = new Chart(ctx, {
+	type: 'line',
+	data: {
+	    datasets: []
 	},
-	scales: {
-	    xAxes: {
-		type: 'realtime',
-		display: false,
-		
-		realtime: {
-		    duration: 20000,  // 過去20000ミリ秒のデータを表示
-		    refresh: 1000,    // onRefresh コールバックを1000ミリ秒毎に呼び出し
-		    delay: 1000,      // 1000ミリ秒の遅延により、次の値が確定し線が完全に引けてから表示
-		    pause: false,     // チャートは一時停止していない
-		    ttl: undefined,   // データはチャートから消えると自動的に削除
-		    frameRate: 30,    // データポイントを毎秒30回描画
+	options: {
+	    plugins: {
+	    },
+	    scales: {
+		xAxes: {
+		    type: 'realtime',
+		    display: false,
 		    
-		    onRefresh: chart => {
-			getLatestData();
-			writeCaution();
-			if(isLookSpeechVolume == "all"){
-			    writeAllStr();
-			    for(let i=0; i<n; i++) {
-				if(chart.data.datasets[i] == undefined){
-				    if(dataAll[i] != undefined){
-					writeDatasets(i,i);
+		    realtime: {
+			duration: 20000,  // 過去20000ミリ秒のデータを表示
+			refresh: 1000,    // onRefresh コールバックを1000ミリ秒毎に呼び出し
+			delay: 1000,      // 1000ミリ秒の遅延により、次の値が確定し線が完全に引けてから表示
+			pause: false,     // チャートは一時停止していない
+			ttl: undefined,   // データはチャートから消えると自動的に削除
+			frameRate: 30,    // データポイントを毎秒30回描画
+			
+			onRefresh: chart => {
+			    getLatestData();
+			    writeCaution();
+			    if(isLookSpeechVolume == "all"){
+				writeAllStr();
+				for(let i=0; i<n; i++) {
+				    if(chart.data.datasets[i] == undefined){
+					if(dataAll[i] != undefined){
+					    writeDatasets(i,i);
+					}
+				    } else {
+					chart.data.datasets[i].data.push(data[i]);
+					chart.data.datasets[i].label = setLabel(i);
+					updateYAxes();
 				    }
+				}
+				for(let i=chart.data.datasets.length-1; i>=n; i--) {
+				    chart.data.datasets.splice(i,1);
+				}
+			    } else if(isLookSpeechVolume == "one"){
+				writeMyStr();
+				if(chart.data.datasets[0] == undefined){
+				    writeDatasets(user-1,0);
 				} else {
-				    chart.data.datasets[i].data.push(data[i]);
-				    chart.data.datasets[i].label = setLabel(i);
+				    chart.data.datasets[0].data.push(data[user-1]);
+				    chart.data.datasets[0].label = setLabel(user-1);
+				    updateYAxes();
+				}
+			    }	
+			}
+		    }
+		},
+		yAxes: {
+		    min: 0,
+		}
+	    }
+	}
+    });
+}
+function setChart2(){
+    var ctx2 = document.getElementById('myChart2').getContext('2d');
+    chart2 = new Chart(ctx2, {
+	type: 'line',
+	data: {
+	    datasets: []
+	},
+	options: {
+	    plugins: {
+	    },
+	    scales: {
+		xAxes: {
+		    type: 'realtime',
+		    display: false,
+		    
+		    realtime: {
+			duration: 20000,  // 過去20000ミリ秒のデータを表示
+			refresh: 1000,    // onRefresh コールバックを1000ミリ秒毎に呼び出し
+			delay: 1000,      // 1000ミリ秒の遅延により、次の値が確定し線が完全に引けてから表示
+			pause: false,     // チャートは一時停止していない
+			ttl: undefined,   // データはチャートから消えると自動的に削除
+			frameRate: 30,    // データポイントを毎秒30回描画
+			
+			onRefresh: chart => {
+			    getLatestData();
+			    writeCaution();
+			    if(isLookSpeechVolume == "all"){
+				writeAllStr();
+				for(let i=0; i<n; i++) {
+				    if(chart2.data.datasets[i] == undefined){
+					if(dataAll[i] != undefined){
+					    writeDatasets(i,i);
+					}
+				    } else {
+					chart2.data.datasets[i].data.push(data2[i]);
+					chart2.data.datasets[i].label = setLabel(i);
+				    }
+				}
+				for(let i=chart2.data.datasets.length-1; i>=n; i--) {
+				    chart2.data.datasets.splice(i,1);
+				}
+			    } else if(isLookSpeechVolume == "one"){
+				writeMyStr();
+				if(chart2.data.datasets[0] == undefined){
+				    writeDatasets(user-1,0);
+				} else {
+				    chart2.data.datasets[0].data.push(data2[user-1]);
+				    chart2.data.datasets[0].label = setLabel(user-1);
 				    updateYAxes();
 				}
 			    }
-			    for(let i=chart.data.datasets.length-1; i>=n; i--) {
-				chart.data.datasets.splice(i,1);
-			    }
-			} else if(isLookSpeechVolume == "one"){
-			    writeMyStr();
-			    if(chart.data.datasets[0] == undefined){
-				writeDatasets(user-1,0);
-			    } else {
-				chart.data.datasets[0].data.push(data[user-1]);
-				chart.data.datasets[0].label = setLabel(user-1);
-				updateYAxes();
-			    }
-			}	
-		    }
-		}
-	    },
-	    yAxes: {
-		min: 0,
-	    }
-	}
-    }
-});
-}
-function setChart2(){
-var ctx2 = document.getElementById('myChart2').getContext('2d');
-chart2 = new Chart(ctx2, {
-    type: 'line',
-    data: {
-	datasets: []
-    },
-    options: {
-	plugins: {
-	},
-	scales: {
-	    xAxes: {
-		type: 'realtime',
-		display: false,
-		
-		realtime: {
-		    duration: 20000,  // 過去20000ミリ秒のデータを表示
-		    refresh: 1000,    // onRefresh コールバックを1000ミリ秒毎に呼び出し
-		    delay: 1000,      // 1000ミリ秒の遅延により、次の値が確定し線が完全に引けてから表示
-		    pause: false,     // チャートは一時停止していない
-		    ttl: undefined,   // データはチャートから消えると自動的に削除
-		    frameRate: 30,    // データポイントを毎秒30回描画
-		    
-		    onRefresh: chart => {
-			getLatestData();
-			writeCaution();
-			if(isLookSpeechVolume == "all"){
-			    writeAllStr();
-			    for(let i=0; i<n; i++) {
-				if(chart2.data.datasets[i] == undefined){
-				    if(dataAll[i] != undefined){
-					writeDatasets(i,i);
-				    }
-				} else {
-				    chart2.data.datasets[i].data.push(data2[i]);
-				    chart2.data.datasets[i].label = setLabel(i);
-				}
-			    }
-			    for(let i=chart2.data.datasets.length-1; i>=n; i--) {
-				chart2.data.datasets.splice(i,1);
-			    }
-			} else if(isLookSpeechVolume == "one"){
-			    writeMyStr();
-			    if(chart2.data.datasets[0] == undefined){
-				writeDatasets(user-1,0);
-			    } else {
-				chart2.data.datasets[0].data.push(data2[user-1]);
-				chart2.data.datasets[0].label = setLabel(user-1);
-				updateYAxes();
-			    }
 			}
 		    }
+		},
+		yAxes: {
+		    min: 0,
+		    max: 100
 		}
-	    },
-	    yAxes: {
-		min: 0,
-		max: 100
 	    }
 	}
-    }
-});
+    });
 }
 //データベースからデータを読み取る
 function getLatestData() {

@@ -24,15 +24,6 @@ const getBtn = document.querySelector('#get-btn');
 const resultDiv = document.querySelector('#result-div');
 const resultDiv2 = document.querySelector('#result-div2');
 
-SpeechRecognition = webkitSpeechRecognition || SpeechRecognition;
-let recognition = new SpeechRecognition();
-
-recognition.lang = 'ja-JP';
-recognition.interimResults = true;
-recognition.continuous = true;
-
-let finalTranscript = ''; // 確定した(黒の)認識結果
-
 //HTML表示
 let n;
 let cautionUser = [];
@@ -88,42 +79,68 @@ let str = [];
 let dataAll = [];
 let sumSpeechVolume = 0;
 
+let flag_speech = 0;
+let flag_speech_stop = 0;
+let finalTranscript = ''; // 確定した(黒の)認識結果
 
-recognition.onresult = (event) => {
-    let interimTranscript = ''; // 暫定(灰色)の認識結果
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-	let transcript = event.results[i][0].transcript;
-	if (event.results[i].isFinal) {
-	    finalTranscript += transcript;
-	} else {
-	    interimTranscript = transcript;
+function vr_function() {
+    if(flag_speech_stop == 1){
+    } else {
+	SpeechRecognition = webkitSpeechRecognition || SpeechRecognition;
+	let recognition = new SpeechRecognition();
+
+	recognition.lang = 'ja-JP';
+	recognition.interimResults = true;
+	recognition.continuous = true;
+
+	recognition.onresult = (event) => {
+	    let interimTranscript = ''; // 暫定(灰色)の認識結果
+	    for (let i = event.resultIndex; i < event.results.length; i++) {
+		let transcript = event.results[i][0].transcript;
+		if (event.results[i].isFinal) {
+		    finalTranscript += transcript;
+		    vr_function();
+		} else {
+		    interimTranscript = transcript;
+		    flag_speech = 1;
+		}
+	    }
+	    isRecognition.innerHTML = "音声を認識中...";
+	    setSpeechVolume(finalTranscript);
+	    getLatestData();
+	    writeSpeechVolume(finalTranscript,interimTranscript);
+	    if(flag_speech_stop == 1){
+		recognition.stop();
+	    }
 	}
+	recognition.onsoundstart = function(){
+	    isRecognition.innerHTML = "音声を認識中...";
+	}
+	recognition.onnomatch = function(){
+	    isRecognition.innerHTML = "もう一度試してください";
+	};
+	recognition.onerror= function(){
+	    isRecognition.innerHTML = "エラー";
+	    if(flag_speech == 0) vr_function();
+	};
+	recognition.onsoundend = function(){
+	    isRecognition.innerHTML = "停止中";
+	    vr_function();
+	};
+	flag_speech = 0;
+	recognition.start();
     }
-    isRecognition.innerHTML = "音声を認識中...";
-    setSpeechVolume(finalTranscript);
-    getLatestData();
-    writeSpeechVolume(finalTranscript,interimTranscript);
 }
-recognition.onsoundstart = function(){
-    isRecognition.innerHTML = "音声を認識中...";
-}
-recognition.onnomatch = function(){
-    isRecognition.innerHTML = "もう一度試してください";
-};
-recognition.onerror= function(){
-    isRecognition.innerHTML = "エラー";
-};
-recognition.onsoundend = function(){
-    isRecognition.innerHTML = "停止中";
-};
 
 function start(){
-    recognition.start();
+    flag_speech_stop = 0;
+    vr_function();
 }
 function stop(){
-    recognition.stop();
+    flag_speech_stop = 1;
     btnArea.innerHTML = '音声認識　<button id="start-btn" class="btn btn-primary" data-bs-toggle="button" onClick="start();">開始</button> <button id="stop-btn" class="btn btn-primary" onClick="stop();">終了</button>';
 }
+
 //データベースからデータを削除
 function resetData(){
     database.ref(room+'/'+"user"+user.value).set(null);
