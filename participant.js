@@ -498,7 +498,7 @@ function writeCaution(){
 	}
     }
     if(isAutoCaution){
-	if(allVolume>100){
+	if(allVolume>(100*n)){
 	    if(isText){
 		if(isCautionAll){
 		    for(let i=0; i<n; i++){
